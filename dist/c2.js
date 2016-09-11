@@ -186,7 +186,7 @@ function c2 () {
             this._invalid_ = true;
             this._invalid_parents[this._invalid_parents.index++] = this;
 
-            if (c2_invalid_timeout === false) {
+            if (c2._invalid_timeout === false) {
                 c2._invalid_timeout = requestAnimationFrame(c2.do_invalidate);
             }
         }

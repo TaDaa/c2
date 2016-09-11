@@ -125,7 +125,6 @@ function c2 () {
             //getter.push('(n === "'+p+'" && (v=this["'+p+'"],true)) === true ');
             getter.push('if (n === "'+p+'") {return this["'+p+'"];}');
         }
-        console.error(this.c2_renderable.prototype.invalidate.compiled);
         //this.c2_renderable.prototype.setAttribute = eval('(function (n,v) {var date=new Date(),me=this;' + setter.join('|| ') + '|| (this[n]=v,this._invalid_ === 0 && this.invalidate(),true)===true;total_time += (new Date() - date);!start_time && check();})');
         this.c2_renderable.prototype.setAttribute = (0,eval)('(function (n,v) {' + setter.join('else ') + 'else {this[n]=v;}  '+'if (this._invalid_ == false) {' + this.c2_renderable.prototype.invalidate.compiled  + '}})')//'(this._invalid_ === false) &&  this.invalidate() })');
         //this.c2_renderable.prototype.getAttribute = eval('(function (n) {var v;'+getter.join('||')+'|| (v=this[n]);return v; })')
