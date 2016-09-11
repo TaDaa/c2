@@ -1,2 +1,2 @@
-# dc
-d3 for canvas
+# c2
+d3 component canvas 
