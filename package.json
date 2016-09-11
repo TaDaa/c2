@@ -1,0 +1,23 @@
+{
+  "name": "c2",
+  "version": "0.1.0",
+  "description": "d3 component canvas",
+  "main": "dist/c2.js",
+  "author": {
+    "name": "Trevor Lovell"
+  },
+  "keywords" : ["d3","canvas","context2d"],
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TaDaa/c2.git"
+  },
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "cp libs/c2.js dist/c2.js && uglifyjs libs/c2.js -c -m -o dist/c2.min.js",
+    "postpublish": "git push --follow-tags"
+  },
+  "devDependencies": {
+    "uglify": "^0.1.5"
+  }
+}
