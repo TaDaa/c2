@@ -59,9 +59,8 @@ function c2 () {
         id = registry.push(this.c2_renderable = (0,eval)('(function c2_renderable () {'+
             'if (this.constructor !== this._c) {this.constructor()}'+
         '})')) - 1,
-        prototype = this.c2_renderable.prototype;
+        prototype = this.c2_renderable.prototype = new c2_baseClass();
 
-        this.c2_renderable.prototype = new c2_baseClass();
         prototype._c = this.c2_renderable;
         prototype._c2_proto = this;
 
