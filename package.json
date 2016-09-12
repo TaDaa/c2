@@ -1,12 +1,16 @@
 {
   "name": "c2",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "d3 component canvas",
   "main": "dist/c2.js",
   "author": {
     "name": "Trevor Lovell"
   },
-  "keywords" : ["d3","canvas","context2d"],
+  "keywords": [
+    "d3",
+    "canvas",
+    "context2d"
+  ],
   "license": "ISC",
   "repository": {
     "type": "git",
@@ -14,10 +18,11 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "build": "cp libs/c2.js dist/c2.js && uglifyjs libs/c2.js -c -m -o dist/c2.min.js",
+    "build": "webpack dist/c2.js && uglifyjs dist/c2.js -c -m -o dist/c2.min.js",
     "postpublish": "git push --follow-tags"
   },
   "devDependencies": {
-    "uglify": "^0.1.5"
+    "uglify": "^0.1.5",
+    "webpack": "^1.13.2"
   }
 }
