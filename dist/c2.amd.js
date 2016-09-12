@@ -1,4 +1,4 @@
-/******/ (function(modules) { // webpackBootstrap
+define(function() { return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
 
@@ -528,4 +528,4 @@
 
 
 /***/ }
-/******/ ]);
+/******/ ])});;

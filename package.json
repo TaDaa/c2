@@ -1,8 +1,8 @@
 {
   "name": "c2",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "d3 component canvas",
-  "main": "dist/c2.js",
+  "main": "dist/c2.node.js",
   "author": {
     "name": "Trevor Lovell"
   },
@@ -18,7 +18,7 @@
   },
   "scripts": {
     "prepublish": "npm run build",
-    "build": "webpack dist/c2.js && uglifyjs dist/c2.js -c -m -o dist/c2.min.js",
+    "build": "rm -rf dist/*.js && webpack",
     "postpublish": "git push --follow-tags"
   },
   "devDependencies": {
