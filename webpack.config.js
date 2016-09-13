@@ -17,6 +17,7 @@ function config (target,optionalName) {
         },
         'output' : {
             'path' : dir,
+            'library' : 'c2',
             'libraryTarget' : target,
             'filename' : 'c2'+optionalName +'.js'
         }
@@ -27,6 +28,7 @@ function config (target,optionalName) {
         },
         'output' : {
             'path' : dir,
+            'library' : 'c2',
             'libraryTarget' : target,
             'filename' : 'c2'+optionalName+'.min.js'
         },
