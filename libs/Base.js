@@ -23,7 +23,7 @@ c2_Base.prototype.getAttribute = c2_getAttribute;
 c2_Base.prototype.removeAttribute = c2_removeAttribute;
 c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 c2_Base.prototype.invalidate = c2_invalidate;
-//c2_Base.prototype.invalidate2 = c2_invalidate2;
+c2_Base.prototype.invalidate2 = c2_invalidate2;
 c2_Base.prototype._events = undefined;
 
 
@@ -159,22 +159,20 @@ function c2_invalidate () {
 
 c2_invalidate.compiled = c2_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
 
-/*
- *function c2_invalidate2 (n) {
- *    if (n._invalid_ === false) {
- *        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
- *        n._invalid_ = true;
- *
- *        if (n.parentNode.__changed__) {
- *            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
- *            n.parentNode.__changed__.push(n);
- *        } else {
- *            n.parentNode.__changed__ = [n];
- *            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
- *        }
- *    }
- *}
- *c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
- */
+function c2_invalidate2 (n) {
+    if (n._invalid_ === false) {
+        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
+        n._invalid_ = true;
+
+        if (n.parentNode.__changed__) {
+            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
+            n.parentNode.__changed__.push(n);
+        } else {
+            n.parentNode.__changed__ = [n];
+            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
+        }
+    }
+}
+c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
 
 module.exports = c2_Base;

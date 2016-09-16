@@ -52,9 +52,9 @@ var c2 =
 /* 1 */
 /***/ function(module, exports, __webpack_require__) {
 
-	function c2 () {
+	/* WEBPACK VAR INJECTION */(function(global) {global.c2 = function c2 () {
 	}
-	c2.create = function c2_create (render) {
+	c2.element = c2.create = function c2_create (render) {
 	    return new this.Drawable(render);
 	};
 	c2.registry = __webpack_require__(2);
@@ -63,11 +63,15 @@ var c2 =
 	c2.Base = __webpack_require__(5);
 	c2.Drawable = __webpack_require__(6);
 	c2.Context2d = __webpack_require__(7);
-	c2.Layer2d = __webpack_require__(8);
+	c2.Layer2d = __webpack_require__(9);
+	c2.createElement = __webpack_require__(8);
+	//TODO
+	//c2.optimize = require('./Optimize');
 
 
 	module.exports = c2;
 
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }())))
 
 /***/ },
 /* 2 */
@@ -88,18 +92,25 @@ var c2 =
 	invalid_parents.index = invalid_cleanup.index = 0;
 
 	function c2_invalidate () {
-	    var parents = invalid_parents,
-	    cleanup = invalid_cleanup,
-	    i,ln,
-	    item;
 
 	    c2_invalidate.timeout = false;
 
-	    for (i=0,ln=parents.length;i<ln;i++) {
-	        parents[i].render();
+	    if (!c2_invalidate.t2) {
+	        c2_invalidate.t2 = requestAnimationFrame(c2_do_invalidate);
 	    }
 
-	    for (i=0,ln=cleanup.length;i<ln;i++) {
+	}
+	function c2_do_invalidate () {
+	    var parents = invalid_parents,
+	    cleanup = invalid_cleanup,
+	    item;
+
+	    c2_invalidate.t2 = false;
+	    for (var i=0,ln=parents.index|0;i<ln;i++) {
+	        parents[i].render();
+	    }
+	    parents.index=0;
+	    for (i=0,ln=cleanup.index|0;i<ln;i++) {
 	        item = cleanup[i];
 	        item._invalid_ = false;
 	        if (item.__changed__ !== undefined) {
@@ -107,7 +118,7 @@ var c2 =
 	        }
 	    }
 
-	    parents.index = cleanup.index  = 0;
+	    cleanup.index  = 0;
 	}
 	c2_invalidate.timeout = false;
 	c2_invalidate.parents = invalid_parents;
@@ -122,12 +133,30 @@ var c2 =
 /***/ function(module, exports) {
 
 	var types = {
-	    'int' : 'v|0',
-	    'float' : '+v',
-	    'string' : 'v||""',
-	    'object' : 'v',
-	    'array' : 'v',
-	    'any' : 'v'
+	    'int' : {
+	        'defaultValue' : 0,
+	        'setValue' : 'v|0'
+	    },
+	    'float' : {
+	        'defaultValue' : 0.0,
+	        'setValue' : 'v'
+	    },
+	    'string' : {
+	        'defaultValue' : '',
+	        'setValue' : 'v'
+	    },
+	    'object' : {
+	        'defaultValue' : null,
+	        'setValue' : 'v'
+	    },
+	    'array' : {
+	        'defaultValue' : null,
+	        'setValue' :  'v'
+	    },
+	    'any' : {
+	        'defaultValue' : null,
+	        'setValue' : 'v'
+	    }
 	};
 	module.exports = types;
 
@@ -157,8 +186,12 @@ var c2 =
 	c2_Base.prototype.querySelectorAll = c2_querySelectorAll;
 	c2_Base.prototype.addEventListener = c2_addEventListener;
 	c2_Base.prototype.removeEventListener = c2_removeEventListener;
+	c2_Base.prototype.setAttribute = c2_setAttribute;
+	c2_Base.prototype.getAttribute = c2_getAttribute;
+	c2_Base.prototype.removeAttribute = c2_removeAttribute;
 	c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 	c2_Base.prototype.invalidate = c2_invalidate;
+	//c2_Base.prototype.invalidate2 = c2_invalidate2;
 	c2_Base.prototype._events = undefined;
 
 
@@ -263,26 +296,54 @@ var c2 =
 	    return index !== -1 && (events.splice(index,1),true);
 	}
 
+	function c2_setAttribute (name,value) {
+	    //(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));
+	    var k = name,v=value;
+	    this[k] = v;
+	    this._invalid_ === false && (this.invalidate());
+	}
+	function c2_getAttribute (name) {
+	    return this[name];
+	}
+	function c2_removeAttribute (name) {
+	    this[name] = undefined;
+	    this._invalid_ === false && (this.invalidate());
+	}
 
 	function c2_invalidate () {
 	    if (this._invalid_ === false) {
-	        var parent = this.parentNode;
-
 	        this._invalid_cleanup[this._invalid_cleanup.index++]=this;
 	        this._invalid_ = true;
 
-	        if (parent.__changed__) {
-	            (parent._invalid_ === false) && parent.invalidate();
-	            parent.__changed__.push(this);
+	        if (this.parentNode.__changed__) {
+	            (this.parentNode._invalid_ === false) && this.parentNode.invalidate();
+	            this.parentNode.__changed__.push(this);
 	        } else {
-	            parent.__changed__ = [this];
-	            (parent._invalid_ === false) && parent.invalidate();
+	            this.parentNode.__changed__ = [this];
+	            (this.parentNode._invalid_ === false) && this.parentNode.invalidate();
 	        }
 	    }
 	}
 
 	c2_invalidate.compiled = c2_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
 
+	/*
+	 *function c2_invalidate2 (n) {
+	 *    if (n._invalid_ === false) {
+	 *        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
+	 *        n._invalid_ = true;
+	 *
+	 *        if (n.parentNode.__changed__) {
+	 *            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
+	 *            n.parentNode.__changed__.push(n);
+	 *        } else {
+	 *            n.parentNode.__changed__ = [n];
+	 *            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
+	 *        }
+	 *    }
+	 *}
+	 *c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
+	 */
 
 	module.exports = c2_Base;
 
@@ -291,33 +352,31 @@ var c2 =
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Base = __webpack_require__(5);
+	var Base = __webpack_require__(5),
+	types = __webpack_require__(4);
+
+
 
 	function c2_Drawable (render) {
 	    var p,
-	    id = this.registry.push(this.c2_renderable = (0,eval)('(function c2_renderable () {'+
-	        'if (this.constructor !== this._c) {this.constructor()}'+
-	        '})')) - 1,
-	    prototype = this.c2_renderable.prototype = new Base();
+	    id = this.registry.push(this)-1,
+	    me = this;
 
-	    prototype._c = this.c2_renderable;
-	    prototype._c2_proto = this;
+	    this._c2_proto = this;
+	    this._c2_id =  id;
+	    this._isDrawable = true;
 
-	    this._c2_id = this.c2_renderable._c2_id =  id;
 	    if (render) {
-	        if (typeof render === 'object') {
-	            for (p in render) {
-	                prototype[p] = render[p];
-	            }
-	        } else if (typeof render === 'function') {
-	            this.render(render);
-	        }
+	        this.render = render;
+	    } else {
+	        console.error('trace');
+	        throw new Error("Render function must be provided to Drawable constructor");
 	    }
+
 	}
 	c2_Drawable.prototype = new Base();
 	c2_Drawable.prototype.attributes = c2_renderable_attributes;
 	c2_Drawable.prototype.constructor = c2_renderable_constructor;
-	c2_Drawable.prototype.render = c2_renderable_render;
 	c2_Drawable.prototype.proto = c2_renderable_proto;
 	c2_Drawable.prototype.compile = c2_renderable_compile;
 	c2_Drawable.prototype.toString = c2_renderable_toString;
@@ -325,47 +384,73 @@ var c2 =
 
 	function c2_renderable_attributes (attributes) {
 	    var p,
+	    cnt=0,
 	    setter = [],
 	    getter = [],
 	    remover = [],
 	    type;
+
+	    this._attributes = attributes;
 	    for (p in attributes) {
 	        type = attributes[p];
-	        setter.push('if (n === "'+p+'") {this["'+p+'"]='+type+';}');
-	        remover.push('if (n === "'+p+'") {this["'+p+'"]=undefined;}');
+	        this[p] = attributes[p].defaultValue;
+	        setter.push('if (n === "'+p+'" ) {this["'+p+'"]='+attributes[p].setValue+';}');
+	        remover.push('if (n === "'+p+'") {this["'+p+'"]=null;}');
 	        getter.push('if (n === "'+p+'") {return this["'+p+'"];}');
 	    }
-	    this.c2_renderable.prototype.setAttribute = (0,eval)('(function (n,v) {' + setter.join('else ') + 'else {this[n]=v;}  '+'if (this._invalid_ == false) {' + this.c2_renderable.prototype.invalidate.compiled  + '}})')//'(this._invalid_ === false) &&  this.invalidate() })');
-	    this.c2_renderable.prototype.getAttribute = (0,eval)('(function (n) {'+getter.join('else ')+' else {return this[n];}})');
-	    this.c2_renderable.prototype.removeAttribute = (0,eval)('(function (n) {' + remover.join('else ') + 'else {this[n]=undefined} if (this._invalid_ === false) {' + this.c2_renderable.prototype.invalidate.compiled+ '}})');
+	    //this.setAttribute = (0,eval)('(function c2_setAttribute1 (k,b) {var n=k,v=b; (this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start))) ;' + setter.join('else ') + 'else {this[n]=v;} ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
+	    this.setAttribute = (0,eval)('(function c2_setAttribute (k,b) {var n=k,v=b; ' + setter.join('else ') + 'else {this[n]=v;} ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
+	    //this.setAttribute = (0,eval)('(function c2_setAttribute (k,b) {var n=k,v=b;this[n]=v; ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
+	    //this.setAttribute = (0,eval)('(function c2_setAttribute (k,b) {(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));var n=k,v=b;this[n]=v; ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
+	    //console.error(this.setAttribute.toString());
+	    this.getAttribute = (0,eval)('(function (k) {var n=k;' +getter.join('else ')+' else {return this[n];}})');
+	    this.removeAttribute = (0,eval)('(function (k) {var n=k;' + remover.join('else ') + 'else {this[n]=null} if (this._invalid_ === false) {' + this.invalidate.compiled+ '}})');
+
 	    return this;
 	}
 
 
 	function c2_renderable_constructor (fn) {
-	    this.c2_renderable.prototype.constructor = fn;
+	    this._constructor = fn;
 	    return this;
 	}
 
 
-	function c2_renderable_render (fn) {
-	    this.c2_renderable.prototype.render = fn;
-	    return this;
-	}
 
 	function c2_renderable_proto (obj) {
-	    var p,
-	    proto = this.c2_renderable.prototype;
+	    var p;
 	    for (p in obj) {
-	        proto[p] = obj[p];
+	        this[p] = obj[p];
 	    }
 	    return this;
 	}
 
 	function c2_renderable_compile () {
-	    //do we want this?
-	    //optimize based on scope
-	}
+	    var p,
+	    renderable = "(function () {"+
+	        "var p;",
+	    //these are commented because I am still tinkering with this performance wise
+	    //"this.render=r.render;this.setAttribute=r.setAttribute;this.getAttribute=r.getAttribute;this.removeAttribute=r.removeAttribute;",
+	    //this is essentially a hack to give ~50% boost in iteration over relying on prototype inheritance
+	    result,
+	    item;
+	    //renderable+=
+	    for (p in this) {
+	        //if (p !== 'render' && p !== 'setAttribute') {
+	            renderable+='this["'+p+'"]=this["'+p+'"];'
+	        //}
+	    }
+	    //"for (p in this) {this[p]=this[p]}";
+	    //"var attributes=this._attributes;for (p in attributes) {this[p]=attributes[p].defaultValue;}"+
+	    renderable+="this._constructor && this._constructor();"+
+	    "})";
+	    result = (0,eval)(renderable);
+	    //result.prototype._c2_proto = this;
+	    //result.prototype._c2_id = this._c2_id;
+
+	    result.prototype = this;
+	    return result;
+	};
 
 
 	function c2_renderable_toString () {
@@ -382,13 +467,14 @@ var c2 =
 	
 
 	var 
+	createElement = __webpack_require__(8),
 	Drawable = __webpack_require__(6),
 	types = __webpack_require__(4);
 
 	Context2d = new Drawable(c2_context_render)
 	    .proto({
 	        'invalidate' : c2_context_invalidate,
-	        'createElementNS' : c2_createElementNS
+	        'createElementNS' : c2_context_createElementNS
 	    })
 	    .attributes({
 	        'fillStyle' : types.string,
@@ -407,30 +493,27 @@ var c2 =
 	    tock = events.tock,
 	    tick = events.tick,
 	    context = this.context,
-	    i,ln,
 	    children = this.children,
 	    child;
 
 	    if (tick) {
-	        for (i=0,ln=tick.length|0;i<ln;i++) {
+	        for (var i=0,ln=tick.length;i<ln;i++) {
 	            tick[i].call(this,context);
 	        }
 	    }
-	    for (i=0,ln=children.length|0;i<ln;i++) {
+	    for (i=0,ln=children.length;i<ln;i++) {
 	        child = children[i];
 	        child.render(context,child.__data__,i,child.__changed__);
 	    }
 	    if (tock) {
-	        for (i=0,ln=tock.length|0;i<ln;i++) {
+	        for (i=0,ln=tock.length;i<ln;i++) {
 	            tock[i].call(this,context);
 	        }
 	    }
 	}
 
-	function c2_createElementNS (a,b) {
-	    var result = new this.registry[b|0]();
-	    result.ownerDocument = this;
-	    return result;
+	function c2_context_createElementNS (a,b) {
+	    return c2.createElement(b);
 	}
 
 	function c2_context_invalidate () {
@@ -439,9 +522,10 @@ var c2 =
 	        this._invalid_cleanup[this._invalid_cleanup.index++] = this;
 	        this._invalid_parents[this._invalid_parents.index++] = this;
 
-	        if (this.invalidator.timeout === false) {
-	            this.invalidator.timeout = requestAnimationFrame(this.invalidator);
-	        }
+	        //if (this.invalidator.timeout === false) {
+	            this.invalidator();
+	            //this.invalidator.timeout=setTimeout(this.invalidator);
+	        //}
 	    }
 	}
 
@@ -452,7 +536,7 @@ var c2 =
 	    if (this._c2Context2d_) {
 	        return this._c2Context2d_;
 	    }
-	    var ref = new (Context2d.c2_renderable);
+	    var ref = c2.createElement(Context2d);
 	    ref.canvas = this;
 	    ref.context = this.getContext('2d');
 	    ref.children = [];
@@ -467,23 +551,43 @@ var c2 =
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var registry = __webpack_require__(2);
+
+	module.exports = function (tag) {
+	    var result;
+	    if (typeof tag === 'string') {
+	        result = registry[tag|0];
+	    } else if (tag._isDrawable === true) {
+	        result = tag;
+	    }
+	    if (!result.c2_renderable) {
+	        //moves properties from prototype into the object instance - performance improvement for large iteration
+	        result.c2_renderable = result.compile();
+	    } 
+	    result = new result.c2_renderable();
+	    result.ownerDocument = c2;
+	    return result;
+	};
+
+	function get_c2_renderable (result) {
+	    return function c2_renderable () {
+	        var r =result,p;
+	         for (p in r) {
+	             this[p] = r[p];
+	         }
+	         if (this._constructor !== undefined) {this._constructor();}
+	    };
+	}
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
 	var Drawable = __webpack_require__(6),
 	types = __webpack_require__(4);
 
-	module.exports =  new Drawable()
-	.constructor(function () {
-	    this.canvas = document.createElement('canvas');
-	    this.context = this.canvas.getContext('2d');
-	    this.children = [];
-	    this._events = {};
-	})
-	.attributes({
-	        'x' : types.int,
-	        'y' : types.int,
-	        'width' : types.int,
-	        'height' : types.int
-	})
-	.render(function (parentContext,d,ix,changed) {
+	module.exports =  new Drawable(function (parentContext,d,ix,changed) {
 	    var events = this._events,
 	    context = this.context,
 	    tock = events.tock,
@@ -521,11 +625,27 @@ var c2 =
 
 	    parentContext.drawImage(this.canvas,this.x|0,this.y|0);
 	})
+	.constructor(function () {
+	    this.canvas = document.createElement('canvas');
+	    this.context = this.canvas.getContext('2d');
+	    this.children = [];
+	    this._events = {};
+	})
+	.attributes({
+	        'x' : types.int,
+	        'y' : types.int,
+	        'width' : types.int,
+	        'height' : types.int
+	})
 	.proto({
 	        'forceUpdate' : function () {
 	            this._forced = true;
 	        }
 	});
+
+
+
+
 
 
 /***/ }

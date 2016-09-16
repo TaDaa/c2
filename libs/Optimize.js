@@ -125,18 +125,18 @@ function c2_optimize_transition_attr (name,value) {
                 for (var i=0,ln=numbers.length,item;i<ln;i++) {
                     n = numbers[i++];
                     if (n.__transition && n.__transition[`+id+`]) {
-                        n.setAttribute("`+name+`",+numbers[i++]+numbers[i]*t);
-                        //n["`+name+`"]=numbers[i++]+numbers[i]*t;
-                        //`+Base.prototype.invalidate2.compiled+`
+                        //n.setAttribute("`+name+`",+numbers[i++]+numbers[i]*t);
+                        n["`+name+`"]=numbers[i++]+numbers[i]*t;
+                        `+Base.prototype.invalidate2.compiled+`
                     }
                 }
                 for (var i=0,ln=all.length,item;i<ln;i++) {
                     item = all[i];
                     n = item.n;
                     if (n.__transition && n.__transition[`+id+`]) {
-                        n.setAttribute("`+name+`",item(t));
-                        //n["`+name+`"] = item(t);
-                        //`+Base.prototype.invalidate2.compiled+`
+                        //n.setAttribute("`+name+`",item(t));
+                        n["`+name+`"] = item(t);
+                        `+Base.prototype.invalidate2.compiled+`
                     }
                 }
                 //console.error(new Date()-start);
