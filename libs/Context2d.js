@@ -1,13 +1,14 @@
 
 
 var 
+createElement = require('./createElement'),
 Drawable = require('./Drawable'),
 types = require('./Types');
 
 Context2d = new Drawable(c2_context_render)
     .proto({
         'invalidate' : c2_context_invalidate,
-        'createElementNS' : c2_createElementNS
+        'createElementNS' : c2_context_createElementNS
     })
     .attributes({
         'fillStyle' : types.string,
@@ -26,30 +27,27 @@ function c2_context_render (parentContext) {
     tock = events.tock,
     tick = events.tick,
     context = this.context,
-    i,ln,
     children = this.children,
     child;
 
     if (tick) {
-        for (i=0,ln=tick.length|0;i<ln;i++) {
+        for (var i=0,ln=tick.length;i<ln;i++) {
             tick[i].call(this,context);
         }
     }
-    for (i=0,ln=children.length|0;i<ln;i++) {
+    for (i=0,ln=children.length;i<ln;i++) {
         child = children[i];
         child.render(context,child.__data__,i,child.__changed__);
     }
     if (tock) {
-        for (i=0,ln=tock.length|0;i<ln;i++) {
+        for (i=0,ln=tock.length;i<ln;i++) {
             tock[i].call(this,context);
         }
     }
 }
 
-function c2_createElementNS (a,b) {
-    var result = new this.registry[b|0]();
-    result.ownerDocument = this;
-    return result;
+function c2_context_createElementNS (a,b) {
+    return c2.createElement(b);
 }
 
 function c2_context_invalidate () {
@@ -58,9 +56,10 @@ function c2_context_invalidate () {
         this._invalid_cleanup[this._invalid_cleanup.index++] = this;
         this._invalid_parents[this._invalid_parents.index++] = this;
 
-        if (this.invalidator.timeout === false) {
-            this.invalidator.timeout = requestAnimationFrame(this.invalidator);
-        }
+        //if (this.invalidator.timeout === false) {
+            this.invalidator();
+            //this.invalidator.timeout=setTimeout(this.invalidator);
+        //}
     }
 }
 
@@ -71,7 +70,7 @@ module.exports = function () {
     if (this._c2Context2d_) {
         return this._c2Context2d_;
     }
-    var ref = new (Context2d.c2_renderable);
+    var ref = c2.createElement(Context2d);
     ref.canvas = this;
     ref.context = this.getContext('2d');
     ref.children = [];

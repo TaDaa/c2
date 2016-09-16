@@ -18,8 +18,12 @@ c2_Base.prototype.querySelector = c2_querySelector;
 c2_Base.prototype.querySelectorAll = c2_querySelectorAll;
 c2_Base.prototype.addEventListener = c2_addEventListener;
 c2_Base.prototype.removeEventListener = c2_removeEventListener;
+c2_Base.prototype.setAttribute = c2_setAttribute;
+c2_Base.prototype.getAttribute = c2_getAttribute;
+c2_Base.prototype.removeAttribute = c2_removeAttribute;
 c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 c2_Base.prototype.invalidate = c2_invalidate;
+//c2_Base.prototype.invalidate2 = c2_invalidate2;
 c2_Base.prototype._events = undefined;
 
 
@@ -124,25 +128,53 @@ function c2_removeEventListener (name,listener) {
     return index !== -1 && (events.splice(index,1),true);
 }
 
+function c2_setAttribute (name,value) {
+    //(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));
+    var k = name,v=value;
+    this[k] = v;
+    this._invalid_ === false && (this.invalidate());
+}
+function c2_getAttribute (name) {
+    return this[name];
+}
+function c2_removeAttribute (name) {
+    this[name] = undefined;
+    this._invalid_ === false && (this.invalidate());
+}
 
 function c2_invalidate () {
     if (this._invalid_ === false) {
-        var parent = this.parentNode;
-
         this._invalid_cleanup[this._invalid_cleanup.index++]=this;
         this._invalid_ = true;
 
-        if (parent.__changed__) {
-            (parent._invalid_ === false) && parent.invalidate();
-            parent.__changed__.push(this);
+        if (this.parentNode.__changed__) {
+            (this.parentNode._invalid_ === false) && this.parentNode.invalidate();
+            this.parentNode.__changed__.push(this);
         } else {
-            parent.__changed__ = [this];
-            (parent._invalid_ === false) && parent.invalidate();
+            this.parentNode.__changed__ = [this];
+            (this.parentNode._invalid_ === false) && this.parentNode.invalidate();
         }
     }
 }
 
 c2_invalidate.compiled = c2_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
 
+/*
+ *function c2_invalidate2 (n) {
+ *    if (n._invalid_ === false) {
+ *        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
+ *        n._invalid_ = true;
+ *
+ *        if (n.parentNode.__changed__) {
+ *            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
+ *            n.parentNode.__changed__.push(n);
+ *        } else {
+ *            n.parentNode.__changed__ = [n];
+ *            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
+ *        }
+ *    }
+ *}
+ *c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
+ */
 
 module.exports = c2_Base;

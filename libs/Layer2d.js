@@ -1,20 +1,7 @@
 var Drawable = require('./Drawable.js'),
 types = require('./Types');
 
-module.exports =  new Drawable()
-.constructor(function () {
-    this.canvas = document.createElement('canvas');
-    this.context = this.canvas.getContext('2d');
-    this.children = [];
-    this._events = {};
-})
-.attributes({
-        'x' : types.int,
-        'y' : types.int,
-        'width' : types.int,
-        'height' : types.int
-})
-.render(function (parentContext,d,ix,changed) {
+module.exports =  new Drawable(function (parentContext,d,ix,changed) {
     var events = this._events,
     context = this.context,
     tock = events.tock,
@@ -52,8 +39,24 @@ module.exports =  new Drawable()
 
     parentContext.drawImage(this.canvas,this.x|0,this.y|0);
 })
+.constructor(function () {
+    this.canvas = document.createElement('canvas');
+    this.context = this.canvas.getContext('2d');
+    this.children = [];
+    this._events = {};
+})
+.attributes({
+        'x' : types.int,
+        'y' : types.int,
+        'width' : types.int,
+        'height' : types.int
+})
 .proto({
         'forceUpdate' : function () {
             this._forced = true;
         }
 });
+
+
+
+
