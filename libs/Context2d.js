@@ -47,7 +47,7 @@ function c2_context_render (parentContext) {
 }
 
 function c2_context_createElementNS (a,b) {
-    return c2.createElement(b);
+    return createElement(b);
 }
 
 function c2_context_invalidate () {

@@ -23,7 +23,7 @@ c2_Base.prototype.getAttribute = c2_getAttribute;
 c2_Base.prototype.removeAttribute = c2_removeAttribute;
 c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 c2_Base.prototype.invalidate = c2_invalidate;
-c2_Base.prototype.invalidate2 = c2_invalidate2;
+//c2_Base.prototype.invalidate2 = c2_invalidate2;
 c2_Base.prototype._events = undefined;
 
 

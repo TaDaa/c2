@@ -191,7 +191,7 @@ module.exports =
 	c2_Base.prototype.removeAttribute = c2_removeAttribute;
 	c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 	c2_Base.prototype.invalidate = c2_invalidate;
-	c2_Base.prototype.invalidate2 = c2_invalidate2;
+	//c2_Base.prototype.invalidate2 = c2_invalidate2;
 	c2_Base.prototype._events = undefined;
 
 
@@ -350,8 +350,7 @@ module.exports =
 /* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var Base = __webpack_require__(5),
-	types = __webpack_require__(4);
+	var Base = __webpack_require__(5);
 
 
 
@@ -424,25 +423,28 @@ module.exports =
 	}
 
 	function c2_renderable_compile () {
-	    var p,
-	    renderable = "(function () {"+
-	        "var p;",
+	    //var p,
+	    //renderable = "(function () {"+
+	        //"var p;",
 	    //these are commented because I am still tinkering with this performance wise
 	    //"this.render=r.render;this.setAttribute=r.setAttribute;this.getAttribute=r.getAttribute;this.removeAttribute=r.removeAttribute;",
 	    //this is essentially a hack to give ~50% boost in iteration over relying on prototype inheritance
-	    result,
-	    item;
+	    //result;
+	    //item;
 	    //renderable+=
-	    for (p in this) {
+	    //for (p in this) {
 	        //if (p !== 'render' && p !== 'setAttribute') {
-	            renderable+='this["'+p+'"]=this["'+p+'"];'
+	            //renderable+='this["'+p+'"]=this["'+p+'"];'
 	        //}
-	    }
+	    //}
 	    //"for (p in this) {this[p]=this[p]}";
 	    //"var attributes=this._attributes;for (p in attributes) {this[p]=attributes[p].defaultValue;}"+
-	    renderable+="this._constructor && this._constructor();"+
-	    "})";
-	    result = (0,eval)(renderable);
+	    //renderable+="this._constructor && this._constructor();"+
+	    //"})";
+	    //result = (0,eval)(renderable);
+	    var result =function () {
+	        this._constructor && this._constructor();
+	    };
 	    //result.prototype._c2_proto = this;
 	    //result.prototype._c2_id = this._c2_id;
 
@@ -511,7 +513,7 @@ module.exports =
 	}
 
 	function c2_context_createElementNS (a,b) {
-	    return c2.createElement(b);
+	    return createElement(b);
 	}
 
 	function c2_context_invalidate () {

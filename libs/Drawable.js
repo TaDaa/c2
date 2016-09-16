@@ -1,5 +1,4 @@
-var Base = require('./Base'),
-types = require('./Types');
+var Base = require('./Base');
 
 
 
@@ -72,25 +71,28 @@ function c2_renderable_proto (obj) {
 }
 
 function c2_renderable_compile () {
-    var p,
-    renderable = "(function () {"+
-        "var p;",
+    //var p,
+    //renderable = "(function () {"+
+        //"var p;",
     //these are commented because I am still tinkering with this performance wise
     //"this.render=r.render;this.setAttribute=r.setAttribute;this.getAttribute=r.getAttribute;this.removeAttribute=r.removeAttribute;",
     //this is essentially a hack to give ~50% boost in iteration over relying on prototype inheritance
-    result,
-    item;
+    //result;
+    //item;
     //renderable+=
-    for (p in this) {
+    //for (p in this) {
         //if (p !== 'render' && p !== 'setAttribute') {
-            renderable+='this["'+p+'"]=this["'+p+'"];'
+            //renderable+='this["'+p+'"]=this["'+p+'"];'
         //}
-    }
+    //}
     //"for (p in this) {this[p]=this[p]}";
     //"var attributes=this._attributes;for (p in attributes) {this[p]=attributes[p].defaultValue;}"+
-    renderable+="this._constructor && this._constructor();"+
-    "})";
-    result = (0,eval)(renderable);
+    //renderable+="this._constructor && this._constructor();"+
+    //"})";
+    //result = (0,eval)(renderable);
+    var result =function () {
+        this._constructor && this._constructor();
+    };
     //result.prototype._c2_proto = this;
     //result.prototype._c2_id = this._c2_id;
 
