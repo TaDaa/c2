@@ -447,7 +447,7 @@ define("c2", [], function() { return /******/ (function(modules) { // webpackBoo
 	                        tweens.tween_group = tween_group;
 	                    //}
 	                    for (m=0,mln=_tweens.length;m<mln;m++) {
-	                        tweens[m] = tween_group.push(_tweens[m].call(item,item.__data__,m,group))-1;
+	                        tweens[m] = tween_group.push(_tweens[m].call(item,item.__data__,k,group))-1;
 	                    }
 	                    tween_group.cnt += mln;
 	                }
