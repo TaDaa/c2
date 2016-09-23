@@ -51,8 +51,8 @@ function c2_context_createElementNS (a,b) {
 }
 
 function c2_context_invalidate () {
-    if (this._invalid_ === false) {
-        this._invalid_ = true;
+    if (this._invalid_ === 0) {
+        this._invalid_ = 1;
         this._invalid_cleanup[this._invalid_cleanup.index++] = this;
         this._invalid_parents[this._invalid_parents.index++] = this;
 

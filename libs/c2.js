@@ -3,6 +3,7 @@ global.c2 = function c2 () {
 c2.element = c2.create = function c2_create (render) {
     return new this.Drawable(render);
 };
+c2.animate = require ('./Animate');
 c2.registry = require('./Registry');
 c2.invalidator = require('./Invalidate');
 c2.types = require('./Types');

@@ -6,9 +6,11 @@ function c2_Base () {
     this._events = {};
 }
 
-c2_Base.prototype._invalid_ = false;
+c2_Base.prototype._invalid_ = 0;
 c2_Base.prototype._invalid_cleanup = invalidator.cleanup;
 c2_Base.prototype._invalid_parents = invalidator.parents;
+c2_Base.prototype._invalid_children_ = -1;
+c2_Base.prototype._invalid_children = invalidator.children;
 c2_Base.prototype.registry = registry;
 c2_Base.prototype.invalidator = invalidator;
 c2_Base.prototype.appendChild = c2_appendChild;
@@ -30,8 +32,8 @@ c2_Base.prototype._events = undefined;
 
 function c2_appendChild (drawable) {
     drawable.parentNode && drawable.parentNode.removeChild(drawable);
-    var result = this.children && (this.children.push(drawable),drawable.parentNode=this,drawable) || null;
-    if (this._invalid_ === false && result !== null) {
+    var result = this.children && (drawable.parentIndex=this.children.push(drawable)-1,drawable.parentNode=this,drawable) || null;
+    if (this._invalid_ === 0 && result !== null) {
         this.invalidate();
     }
     return result;
@@ -52,15 +54,16 @@ function c2_insertBefore (drawable,referenceNode) {
             index = children.indexOf(referenceNode);
         }
         if (index !== -1) {
+            drawable.parentIndex = index;
             children.splice(index,0,drawable);
         } else {
-            children.push(drawable);
+            drawable.parentIndex = children.push(drawable) - 1;
         }
         drawable.parentNode=this;
     } else {
         drawable = null;
     }
-    if (drawable && this._invalid_ === false) {
+    if (drawable && this._invalid_ === 0) {
         this.invalidate();
     }
     return drawable;
@@ -68,13 +71,26 @@ function c2_insertBefore (drawable,referenceNode) {
 
 
 function c2_removeChild (drawable) {
-    var children = this.children,
-    index = children ? children.indexOf(drawable) : -1,
-    result = index !== -1 && (children.splice(index,1))[0] || null;
-    if (this._invalid_ === false && result !== null) {
+    if (drawable.parentNode !== this) {
+        return;
+    } 
+
+    if (this._invalid_children_ === -1) {
+        this._invalid_children_ = drawable.parentIndex|0;
+        this._invalid_children[this._invalid_children.index++]=this;
+    }
+    if (this._invalid_children_ > drawable.parentIndex) {
+        this._invalid_children_ = drawable.parentIndex;
+    }
+
+    this.children[drawable.parentIndex] = undefined;
+    drawable.parentIndex = -1;
+    drawable.parentNode = undefined;
+
+    if (this._invalid_ === 0 && result !== null) {
         this.invalidate();
     }
-    return result;
+    return drawable;
 }
 
 
@@ -84,13 +100,14 @@ function c2_querySelector (selector) {
     result;
     if (children) {
         for (var i=0,ln=children.length;i<ln;i++) {
-            child = children[i];
-            if (child._c2_proto === selector) {
-                return child;
-            } else if (child.children && child.children.length) {
-                result = c2_querySelector.call(child,selector);
-                if (result) {
-                    return result;
+            if (child = children[i]) {
+                if (child._c2_proto === selector) {
+                    return child;
+                } else if (child.children && child.children.length) {
+                    result = c2_querySelector.call(child,selector);
+                    if (result) {
+                        return result;
+                    }
                 }
             }
         }
@@ -105,9 +122,10 @@ function c2_querySelectorAll (selector,passThrough) {
     result = passThrough || [];
     if (children) {
         for (var i=0,ln=children.length;i<ln;i++) {
-            child = children[i];
-            child._c2_proto === selector && result.push(child);
-            (child.children && child.children.length) && c2_querySelectorAll.call(child,selector,result);
+            if (child = children[i]) {
+                child._c2_proto === selector && result.push(child);
+                (child.children && child.children.length) && c2_querySelectorAll.call(child,selector,result);
+            }
         }
     }
     return result;
@@ -132,47 +150,49 @@ function c2_setAttribute (name,value) {
     //(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));
     var k = name,v=value;
     this[k] = v;
-    this._invalid_ === false && (this.invalidate());
+    this._invalid_ === 0 && (this.invalidate());
 }
 function c2_getAttribute (name) {
     return this[name];
 }
 function c2_removeAttribute (name) {
     this[name] = undefined;
-    this._invalid_ === false && (this.invalidate());
+    this._invalid_ === 0 && (this.invalidate());
 }
 
 function c2_invalidate () {
-    if (this._invalid_ === false) {
+    if (this._invalid_ === 0) {
         this._invalid_cleanup[this._invalid_cleanup.index++]=this;
-        this._invalid_ = true;
+        this._invalid_ = 1;
 
-        if (this.parentNode.__changed__) {
-            (this.parentNode._invalid_ === false) && this.parentNode.invalidate();
+        if (this.parentNode.__changed__ !== undefined) {
+            (this.parentNode._invalid_ === 0) && this.parentNode.invalidate();
             this.parentNode.__changed__.push(this);
         } else {
             this.parentNode.__changed__ = [this];
-            (this.parentNode._invalid_ === false) && this.parentNode.invalidate();
+            (this.parentNode._invalid_ === 0) && this.parentNode.invalidate();
         }
     }
 }
 
 c2_invalidate.compiled = c2_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
 
-function c2_invalidate2 (n) {
-    if (n._invalid_ === false) {
-        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
-        n._invalid_ = true;
-
-        if (n.parentNode.__changed__) {
-            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
-            n.parentNode.__changed__.push(n);
-        } else {
-            n.parentNode.__changed__ = [n];
-            (n.parentNode._invalid_ === false) && n.parentNode.invalidate();
-        }
-    }
-}
-c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
+/*
+ *function c2_invalidate2 (n) {
+ *    if (n._invalid_ === 0) {
+ *        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
+ *        n._invalid_ = 1;
+ *
+ *        if (n.parentNode.__changed__) {
+ *            (n.parentNode._invalid_ === 0) && n.parentNode.invalidate();
+ *            n.parentNode.__changed__.push(n);
+ *        } else {
+ *            n.parentNode.__changed__ = [n];
+ *            (n.parentNode._invalid_ === 0) && n.parentNode.invalidate();
+ *        }
+ *    }
+ *}
+ *c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
+ */
 
 module.exports = c2_Base;
