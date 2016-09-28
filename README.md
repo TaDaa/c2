@@ -21,22 +21,24 @@ or
 `npm install --save-dev c2`
 
 All scripts:
-`dist/c2.js
 
-dist/c2.min.js
+* dist/c2.js
 
-dist/c2.amd.js
+* dist/c2.min.js
 
-dist/c2.amd.min.js
+* dist/c2.amd.js
 
-dist/c2.node.js
+* dist/c2.amd.min.js
 
-dist/c2.node.min.js
+* dist/c2.node.js
 
-dist/c2.umd.js
+* dist/c2.node.min.js
 
-dist/c2.umd.min.js`
-`
+* dist/c2.umd.js
+
+* dist/c2.umd.min.js
+
 
 2) Make sure you install d3.js.  c2.js can be loaded before or after d3.
+
 3) Review demos and code away!
