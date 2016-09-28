@@ -7,7 +7,7 @@ WebGL support
 api/docs
 
 ### Demos (with code)
-1) <a href="demos/bars.html">Bars</a>
+1) <a href="demos/bars.html" target="_blank">Bars</a>
 
 
 
