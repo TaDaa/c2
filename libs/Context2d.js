@@ -5,12 +5,16 @@ createElement = require('./createElement'),
 Drawable = require('./Drawable'),
 types = require('./Types');
 
+
+
+
 Context2d = new Drawable(c2_context_render)
-    .proto({
+.proto({
         'invalidate' : c2_context_invalidate,
+        '_invalidate' : c2_context_pre_checked_invalidate,
         'createElementNS' : c2_context_createElementNS
-    })
-    .attributes({
+})
+.attributes({
         'fillStyle' : types.string,
         'globalAlpha' : types.float,
         'lineWidth' : types.float,
@@ -19,7 +23,7 @@ Context2d = new Drawable(c2_context_render)
         'shadowBlur' : types.float,
         'shadowOffsetX' : types.float,
         'shadowOffsetY' : types.float
-    });
+});
 
 
 function c2_context_render (parentContext) {
@@ -28,16 +32,16 @@ function c2_context_render (parentContext) {
     tick = events.tick,
     context = this.context,
     children = this.children,
+    i,ln,
     child;
 
     if (tick) {
-        for (var i=0,ln=tick.length;i<ln;i++) {
+        for (i=0,ln=tick.length;i<ln;i++) {
             tick[i].call(this,context);
         }
     }
     for (i=0,ln=children.length;i<ln;i++) {
-        child = children[i];
-        child.render(context,child.__data__,i,child.__changed__);
+        (child=children[i]).render(context,child.__data__,i);
     }
     if (tock) {
         for (i=0,ln=tock.length;i<ln;i++) {
@@ -50,16 +54,22 @@ function c2_context_createElementNS (a,b) {
     return createElement(b);
 }
 
-function c2_context_invalidate () {
-    if (this._invalid_ === 0) {
-        this._invalid_ = 1;
+function c2_context_pre_checked_invalidate () {
+    if (this._not_invalid_) {
+        this._not_invalid_ = 0;
         this._invalid_cleanup[this._invalid_cleanup.index++] = this;
         this._invalid_parents[this._invalid_parents.index++] = this;
 
-        //if (this.invalidator.timeout === false) {
-            this.invalidator();
-            //this.invalidator.timeout=setTimeout(this.invalidator);
-        //}
+        !this.invalidator.t2 && this.invalidator();
+    }
+}
+function c2_context_invalidate () {
+    if (this._not_invalid_) {
+        this._not_invalid_ = 0;
+        this._invalid_cleanup[this._invalid_cleanup.index++] = this;
+        this._invalid_parents[this._invalid_parents.index++] = this;
+
+        !this.invalidator.t2 && this.invalidator();
     }
 }
 
@@ -73,7 +83,6 @@ module.exports = function () {
     var ref = c2.createElement(Context2d);
     ref.canvas = this;
     ref.context = this.getContext('2d');
-    ref.children = [];
     ref.ownerDocument = ref;
     this._c2Context2d_ = ref;
     ref._events = {};

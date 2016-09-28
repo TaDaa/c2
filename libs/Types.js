@@ -1,4 +1,4 @@
-var types = {
+module.exports = {
     'int' : {
         'defaultValue' : 0,
         'setValue' : 'v|0'
@@ -24,5 +24,3 @@ var types = {
         'setValue' : 'v'
     }
 };
-module.exports = types;
-

@@ -19,6 +19,8 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rm -rf dist/*.js && webpack",
+                          
+    "cp": "cp dist/c2.node.js ../tadaa.github.io/node_modules/c2/dist/c2.node.js",
     "postpublish": "git push --follow-tags"
   },
   "devDependencies": {

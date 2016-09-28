@@ -2,11 +2,13 @@ var invalidator = require('./Invalidate.js'),
 registry = require('./Registry.js');
 
 
+
+
 function c2_Base () {
     this._events = {};
 }
 
-c2_Base.prototype._invalid_ = 0;
+c2_Base.prototype._not_invalid_ = 1;
 c2_Base.prototype._invalid_cleanup = invalidator.cleanup;
 c2_Base.prototype._invalid_parents = invalidator.parents;
 c2_Base.prototype._invalid_children_ = -1;
@@ -25,6 +27,7 @@ c2_Base.prototype.getAttribute = c2_getAttribute;
 c2_Base.prototype.removeAttribute = c2_removeAttribute;
 c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 c2_Base.prototype.invalidate = c2_invalidate;
+c2_Base.prototype._invalidate = c2_pre_checked_invalidate;
 //c2_Base.prototype.invalidate2 = c2_invalidate2;
 c2_Base.prototype._events = undefined;
 
@@ -32,11 +35,19 @@ c2_Base.prototype._events = undefined;
 
 function c2_appendChild (drawable) {
     drawable.parentNode && drawable.parentNode.removeChild(drawable);
-    var result = this.children && (drawable.parentIndex=this.children.push(drawable)-1,drawable.parentNode=this,drawable) || null;
-    if (this._invalid_ === 0 && result !== null) {
-        this.invalidate();
+    var children=this.children,result;
+    if (!children) {
+        children = this.children = [];
+        //this.__changed__ = [];
     }
-    return result;
+
+    drawable.parentIndex=children.push(drawable)-1;
+    drawable.parentNode = this;
+
+    if (this._not_invalid_) {
+        this._invalidate();
+    }
+    return drawable;
 }
 
 
@@ -49,22 +60,24 @@ function c2_insertBefore (drawable,referenceNode) {
     children = this.children,
     index = -1;
 
-    if (children) { 
-        if (referenceNode && referenceNode.parentNode === this) {
-            index = children.indexOf(referenceNode);
-        }
-        if (index !== -1) {
-            drawable.parentIndex = index;
-            children.splice(index,0,drawable);
-        } else {
-            drawable.parentIndex = children.push(drawable) - 1;
-        }
-        drawable.parentNode=this;
-    } else {
-        drawable = null;
+    if (!children) {
+        children = this.children = [];
+        //this.__changed__ = [];
     }
-    if (drawable && this._invalid_ === 0) {
-        this.invalidate();
+
+    if (referenceNode && referenceNode.parentNode === this) {
+        index = children.indexOf(referenceNode);
+    }
+    if (index !== -1) {
+        drawable.parentIndex = index;
+        children.splice(index,0,drawable);
+    } else {
+        drawable.parentIndex = children.push(drawable) - 1;
+    }
+    drawable.parentNode=this;
+
+    if (this._not_invalid_) {
+        this._invalidate();
     }
     return drawable;
 }
@@ -87,8 +100,8 @@ function c2_removeChild (drawable) {
     drawable.parentIndex = -1;
     drawable.parentNode = undefined;
 
-    if (this._invalid_ === 0 && result !== null) {
-        this.invalidate();
+    if (this._not_invalid_) {
+        this._invalidate();
     }
     return drawable;
 }
@@ -150,28 +163,31 @@ function c2_setAttribute (name,value) {
     //(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));
     var k = name,v=value;
     this[k] = v;
-    this._invalid_ === 0 && (this.invalidate());
+    this._not_invalid_ && (this._invalidate());
 }
 function c2_getAttribute (name) {
     return this[name];
 }
 function c2_removeAttribute (name) {
     this[name] = undefined;
-    this._invalid_ === 0 && (this.invalidate());
+    this._not_invalid_ && (this._invalidate());
 }
 
-function c2_invalidate () {
-    if (this._invalid_ === 0) {
-        this._invalid_cleanup[this._invalid_cleanup.index++]=this;
-        this._invalid_ = 1;
+//TODO invalidate event
+function c2_pre_checked_invalidate () {
+    this._invalid_cleanup[this._invalid_cleanup.index++]=this;
+    this._not_invalid_ = 0;
 
-        if (this.parentNode.__changed__ !== undefined) {
-            (this.parentNode._invalid_ === 0) && this.parentNode.invalidate();
-            this.parentNode.__changed__.push(this);
-        } else {
-            this.parentNode.__changed__ = [this];
-            (this.parentNode._invalid_ === 0) && this.parentNode.invalidate();
-        }
+    this.parentNode._not_invalid_ && this.parentNode.invalidate();
+}
+c2_pre_checked_invalidate.compiled = c2_pre_checked_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
+function c2_invalidate () {
+    if (this._not_invalid_) {
+        this._invalid_cleanup[this._invalid_cleanup.index++]=this;
+        this._not_invalid_ = 0;
+        this.willInvalidate && this.willInvalidate();
+
+        this.parentNode._not_invalid_ && this.parentNode.invalidate();
     }
 }
 

@@ -1,3 +1,4 @@
+
 module.exports = function (selection) {
     return new c2_Animate(selection);
 };
@@ -6,6 +7,7 @@ module.exports = function (selection) {
 var DEFAULT_EASE = function easeCubicInOut(t) {
     return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
 },
+invalidate = require('./Invalidate'),
 DEFAULT_DELAY = 0,
 DEFAULT_DURATION = 250;
 
@@ -14,12 +16,17 @@ DEFAULT_DURATION = 250;
 function c2_Animate (name) {
 
     function animation (selection) {
-        animation.tween('',animation._compile());
+        var compiled;
+        if (compiled = animation._compile()) {
+            animation.tween('',compiled);
+        }
         pending[pending_cnt++] = {
             'selection' : selection,
             'animation' : animation
         };
-        !c2_timer_running && (c2_timer_running = true,requestAnimationFrame(start_c2_timer));
+        !c2_timer_running && (c2_timer_running = true,invalidate.nextCalculate(start_c2_timer));
+        !c2_timer_running && (c2_timer_running = true,setTimeout(start_c2_timer));
+        //!c2_timer_running && (c2_timer_running = true,requestAnimationFrame(start_c2_timer));
     }
     //animation._id = animateIds++;
     animation._name = name || '';
@@ -96,7 +103,7 @@ function c2_on (name,fn) {
 }
 
 function c2_compile () {
-    var me=this,p,to=this._to,result='(function (to,n) {return function (d,i,g) {',
+    var me=this,p,to=this._to,result='(function (to,n) {return function (d,i) {',
     vars = ['var me=this'],
     interpolators = [],
     tween = [],
@@ -123,14 +130,16 @@ function c2_compile () {
     for (p in to) {
         compiled[p] = to[p];
         vars.push('s'+cnt+'=this["'+p+'"]',
-            'v'+(cnt)+'='+ (typeof to[p] === 'function' && 'to["'+p+'"].call(this,d,i,g)'||'to["'+p+'"]'),
-            't'+(cnt)+'=typeof v'+cnt+' === "number" && 1 || 0'
+            'v'+(cnt)+'='+ (typeof to[p] === 'function' && 'to["'+p+'"].call(this,d,i)'||'to["'+p+'"]'),
+            't'+(cnt)+'=typeof v'+cnt+' === "number"'
         );
         interpolators.push(
-            'if (t'+cnt+'===1) {s'+cnt+'=+s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
+            'if (t'+cnt+') {s'+cnt+'=s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
             //'if (t'+cnt+'===true) {s'+cnt+'=s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
         )
-        tween.push ('if (t'+cnt+'===1) {m["'+p+'"]=s'+cnt+'+v'+cnt+'*t;} else {m["'+p+'"]=v'+cnt+'(t);}')
+        //tween.push ('if (t'+cnt+') { m.setAttribute("'+p+'",s'+cnt+'+v'+cnt+'*t);} else {m["'+p+'"]=v'+cnt+'(t);}')
+        //tween.push ('(t'+cnt+') &&  ( m["'+p+'"]=s'+cnt+'+v'+cnt+'*t,true) || (m["'+p+'"]=v'+cnt+'(t));')
+        tween.push ('if (t'+cnt+') m["'+p+'"]=s'+cnt+'+v'+cnt+'*t; else m["'+p+'"]=v'+cnt+'(t);')
         cnt++;
     }
     result += vars.join(',') + ';';
@@ -139,8 +148,10 @@ function c2_compile () {
         'var m = me;';
 
     result += tween.join('');
-    result += 'm._invalid_===0 && m.invalidate();'
-    result += 'e === 1 && (n(m,d,i,g));'
+    //result += 'if (m._not_invalid_) { m._not_invalid_=0;m._invalid_cleanup[m._invalid_cleanup.index++]=m;m.parentNode._not_invalid_&&m.parentNode.invalidate()};'
+    result += 'm._not_invalid_&&m.parentNode&&m._invalidate();'
+    //result += 'm._not_invalid_&& (m._not_invalid_=0,m._invalid_cleanup[me._invalid_cleanup.index++],m.parentNode._not_invalid_&&m.parentNode.invalidate());'
+    result += 'e&&n(m,d,i);'
     result += '}'
 
     //}
@@ -173,7 +184,7 @@ function c2_to (name,value) {
 function c2_to2 (name,value) {
     if (arguments.length > 1) { 
         if (typeof value === 'function') {
-             return this.tween('attr.'+name,function (d,i,g) {
+            return this.tween('attr.'+name,function (d,i,g) {
                 var me = this,
                 v = value.call(this,d,i,g),
                 s = this[name];
@@ -195,25 +206,25 @@ function c2_to2 (name,value) {
                 }
             });
         } else { 
-            return this.tween('attr.'+ name,function () {
-                var me = this,
-                v = value,
-                s = this[name];
-                if (typeof v === 'number' && typeof s === 'number') {
-                    return function (t) {
-                        var m = me;
-                        m[name] = s+v*t;
-                        m._invalid_ === false && m.invalidate();
-                    };
-                } else {
-                    v = d3.interpolate(s,v);
-                    return function (t) {
-                        var m = me;
-                        m[name] = v(t);
-                        m._invalid_ === false && m.invalidate();
-                    };
-                }
-            });
+        return this.tween('attr.'+ name,function () {
+            var me = this,
+            v = value,
+            s = this[name];
+            if (typeof v === 'number' && typeof s === 'number') {
+                return function (t) {
+                    var m = me;
+                    m[name] = s+v*t;
+                    m._invalid_ === false && m.invalidate();
+                };
+            } else {
+                v = d3.interpolate(s,v);
+                return function (t) {
+                    var m = me;
+                    m[name] = v(t);
+                    m._invalid_ === false && m.invalidate();
+                };
+            }
+        });
         }
     } else {
         if (typeof name === 'object') {
@@ -221,7 +232,6 @@ function c2_to2 (name,value) {
             for (p in name) {
                 this.to(p,name[p]);
             }
-            //console.error(111);
             return this;
         }
         return this.tween(name);
@@ -243,31 +253,55 @@ function c2_tween (name,tween) {
 
 window.start_durations=[],
 window.available_start_indices=[],
+window.available_start_cnt=0,
+window.available_invalid = true;
+window.ordered_available = [];
 window.start_duration_end_index=-1,
 window.ease_groups = [],
-window.start_duration_map = {};
-window.transitionIds=1,
 window.pending=[],
 window.pending_cnt = 0,
-window.c2_timer_running = false;
+window.start_duration_map = {},
+window.available={};
+var transitionIds=1,
+c2_timer_running = false;
 
 
 function add_pending (date) {
     var i,ln,j,jln,k,kln,m,mln,groups,group,item,tween_group,tweens,
     delay,duration,ease,_delay,_duration,delay_is_fn,duration_is_fn,
+    available_start_cnt,
     _ease_groups = ease_groups,
     _pending = pending,
-    _tweens,_name,twln,
+    _tweens,_name,twln,p,
     ease_group,
     names,
     start_duration_key,
-    available_start_cnt = available_start_indices.length,
     index,
     stamp = date,
     animation,
     bundle,
     selection;
 
+    if (available_invalid) {
+        available_invalid = false;
+        if (start_duration_end_index===-1) {
+            available_start_cnt=0;
+        } else {
+            window.ordered_available = [];
+            for (i=0,ln=available_start_indices.length;i<ln;i++) {
+                if (available_start_indices[i]) {
+                    j = i*2;
+                    if (j > start_duration_end_index) {
+                        break;
+                    } else {
+                        ordered_available.push(j);
+                    }
+                }
+            }
+        }
+        //available_start_indices.sort();
+    }
+    //console.error(ordered_available);
     //return;
     for (i=0,ln=pending_cnt;i<ln;i++) {
         bundle = _pending[i];
@@ -299,7 +333,7 @@ function add_pending (date) {
 
 
                             for (m=0,mln=tweens.length;m<mln;m++) {
-                                tween_group[tweens[m]] = false;
+                                tween_group[tweens[m]] = 0;
                             }
 
                             if (tween_group.cnt !== 0 && (tween_group.cnt -= mln) <= 0 ) {
@@ -318,12 +352,12 @@ function add_pending (date) {
                             }
                         }
                     } 
-                    if (delay_is_fn === true) {
-                        delay = stamp+_delay.call(item,item.__data__,k,group);
+                    if (delay_is_fn) {
+                        delay = stamp+ _delay.call(item,item.__data__,k,group);
                     } else {
                         delay = stamp+_delay;
                     }
-                    if (duration_is_fn === true) {
+                    if (duration_is_fn) {
                         duration = _duration.call(item,item.__data__,k,group);
                     } else {
                         duration = _duration;
@@ -331,8 +365,21 @@ function add_pending (date) {
                     start_duration_key = delay + '-' + duration;
                     if ( !(ease_group = start_duration_map[start_duration_key])) {
                         if (available_start_cnt > 0) {
+                            index = ordered_available.shift();
+                            available_start_indices[index/2]=0;
                             available_start_cnt--;
-                            index = available_start_indices.shift();
+                            //index = start_durations.indexOf(-1);
+                            //for (p in available) {
+                                //console.error('taking p');
+                                //index = p;
+                                //delete available[p];
+                                //available_start_cnt--;
+                                //break;
+                            //}
+                            //console.error('a',index);
+                            //index = available_start_indices.shift();
+                            //available_start_cnt--;
+                            //available_start_indices[--available_start_cnt];
                         } else {
                             index = start_duration_end_index + 1;
                         } 
@@ -360,12 +407,12 @@ function add_pending (date) {
                         }
                     }
                     names = item._c2_transition;
-                    if (names === undefined) {
+                    if (!names) {
                         names = item._c2_transition = {};
                     }
                     //if ((tweens = names[_name]) === undefined) {
-                        tweens = names[_name] = [];
-                        tweens.tween_group = tween_group;
+                    tweens = names[_name] = [];
+                    tweens.tween_group = tween_group;
                     //}
                     for (m=0,mln=_tweens.length;m<mln;m++) {
                         tweens[m] = tween_group.push(_tweens[m].call(item,item.__data__,k,group))-1;
@@ -389,13 +436,14 @@ function start_c2_timer () {
     item,
     date = Date.now(),
     start = 0,
-    t=0,e=false,
+    t=0,e=0,
     ease_value,
     duration,tween,
     tweens,tween_group,
-    cleanup = false;
+    cleanup = 0;
+
     //first check pending
-    if (ln = pending_cnt) {
+    if ( pending_cnt) {
         add_pending(date);
     }
 
@@ -406,47 +454,66 @@ function start_c2_timer () {
                 duration = start_durations[i];
                 if (duration > 0) {
                     t = (date-start) / duration; 
-                    (t >= 1) && (t = 1);
+                    (t >= 1) && (e = t = 1);
                     if (group = ease_groups[g]) {
-                        for (j=0,jln=group.length;j<jln;j++,j++) {
+                        for (j=0,jln=group.length;j<jln;j+=2) {
                             tweens = group[j+1];
                             if ( kln=tweens.length) {
                                 ease_value = group[j](t);
                                 for (k=0;k<kln;k++) {
-                                    (tween = tweens[k]) && tween(ease_value,t);
+                                    (tween = tweens[k]) && tween(ease_value,e);
                                 }
                             }
                         }
                     }
                 } else {
-                    t=1;
+                    e=1;
                 }
-                if (t===1) {
-                    available_start_indices.push(i-1);
+                if (e) {
+                    e=0;
+                    available_start_cnt++;
+                    !available_invalid && (available_invalid = true);
+                    available_start_indices[(i-1)/2]=1;
+                    //available_start_indices.push(i-1);
+                    //if (i-1 > available_start_indices[0]) {
+                        //available_start_indices.push(i-1);
+                    //} else {
+                        //available_start_indices.unshift(i-1);
+                    //}
+                    //available[i-1]=true;
+                    //available_start_indices[i-1] = true;
+                    //available_start_indices.push(i-1);
+                    //available_start_indices[available_start_cnt++]=i-1;
+                    //console.error(i-1);
+                    //available_start_indices.push(i-1);
                     delete start_duration_map[start_durations[i-1]+'-'+start_durations[i]];
                     start_durations[i-1] =  start_durations[i] = -1;
                     ease_groups[g] = false;
                     //ease_groups[g].length = 0;
-                    i === start_duration_end_index && (cleanup = true);
+                    i === start_duration_end_index && (cleanup = 1);
                 }
             }
         }
-        if (cleanup === true) {
+        if (cleanup) {
             //update end_index
-            for (i=start_duration_end_index;i>=-1;i--) {
+            for (i=start_duration_end_index-1;i>=-1;i-=2) {
                 if (start_durations[i] !== -1) {
-                    start_duration_end_index = i;
+                    start_duration_end_index = i+1;
                     break;
                     //return;
                 }
             }
+            //console.error(i);
+            if (i<=-1) start_duration_end_index=-1
         }
     }
-
     //console.error(new Date()-date);
+
     if (pending_cnt > 0 || start_duration_end_index > 0) {
-        requestAnimationFrame(start_c2_timer);
+        invalidate.nextCalculate(start_c2_timer);
     } else {
         c2_timer_running = false;
     }
 }
+
+

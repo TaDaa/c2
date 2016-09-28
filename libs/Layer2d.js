@@ -1,3 +1,4 @@
+//TODO Lyaer2d needs a rework due to removal of changed array
 var Drawable = require('./Drawable.js'),
 types = require('./Types');
 

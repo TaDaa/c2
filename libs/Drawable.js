@@ -49,7 +49,7 @@ function c2_renderable_attributes (attributes) {
     //this.setAttribute = (0,eval)('(function c2_setAttribute (k,b) {(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));var n=k,v=b;this[n]=v; ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
     //console.error(this.setAttribute.toString());
     this.getAttribute = (0,eval)('(function (k) {var n=k;' +getter.join('else ')+' else {return this[n];}})');
-    this.removeAttribute = (0,eval)('(function (k) {var n=k;' + remover.join('else ') + 'else {this[n]=null} if (this._invalid_ === 0) {' + this.invalidate.compiled+ '}})');
+    this.removeAttribute = (0,eval)('(function (k) {var n=k;' + remover.join('else ') + 'else {this[n]=null} if (this._not_invalid_) {' + this.invalidate.compiled+ '}})');
 
     return this;
 }
@@ -97,7 +97,7 @@ function c2_renderable_compile () {
         "this._invalid_parents=this._invalid_parents;" + 
         "this._invalid_children=this._invalid_children;"+
         "this._invalid_children_=-1;"+
-        "this._invalid_=0;";
+        "this._not_invalid_=1;";
 
     renderable+="this._constructor && this._constructor();"+
     "})";

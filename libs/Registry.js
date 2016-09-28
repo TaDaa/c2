@@ -1,2 +1,1 @@
-var registry = [];
-module.exports = registry;
+module.exports = [];
