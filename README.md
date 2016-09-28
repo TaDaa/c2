@@ -3,8 +3,12 @@
 c2 is a helper library for creating components that render to canvas.  Currently c2 is only compatible with D3 v4.
 
 ### TODO
-demos
-api
+WebGL support
+api/docs
+
+### Demos (with code)
+1) <a href="demos/bars.html">Bars</a>
+
 
 
 ### Quickstart/Tutorial:
