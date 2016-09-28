@@ -11,7 +11,7 @@ api/docs
 
 
 
-### Quickstart/Tutorial:
+### Quickstart
 1) Download script through npm or download/include the appropriate script.  Pre-minified scripts are available.
 
 `<script src="/path/to/dist/c2.js">`
