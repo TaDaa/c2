@@ -7,7 +7,7 @@ WebGL support
 api/docs
 
 ### Demos (with code)
-1) <a href="demos/bars.html" target="_blank">Bars</a>
+1) <a href="https://tadaa.github.io/c2/demos/bars.html" target="_blank">Bars</a>
 
 
 
