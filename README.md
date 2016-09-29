@@ -1,6 +1,6 @@
 # C2
 
-C2 is a helper library for creating custom components that render to canvas.  Currently c2 is only compatible with D3 v4.  
+C2 is a helper library for creating custom components that render to canvas.  Currently C2 is only compatible with D3 v4.  
 
 C2 works by allowing you to define custom element tags that are intended to render to canvas.
 
@@ -31,7 +31,12 @@ var Rect = c2.element(function (context) {
 
 //c2.Context2d is a custom tag provided by c2 that selects the 2d context from a canvas element
 
-var context = d3.select('canvas').select(c2.Context2d);
+var context = d3.select('canvas').select(c2.Context2d)
+  //tick is an event that triggers before each render frame
+  //if you need to use an after render event, use "tock"
+  .on('tick',function () {
+    this.context.clearRect(0,0,this.context.canvas.width,this.context.canvas.height);
+  })
 var selection = context.selectAll(Rect).data(data,function (d,i) {return i;});
 selection.enter()
   .append(Rect)
