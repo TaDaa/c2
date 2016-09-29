@@ -107,6 +107,8 @@ function load () {
         //c2.Context2d is a predefined element tag 
         //webgl may be supported later
         context = canvas.select(c2.Context2d)
+            //tick is a custom event that is fired before the context is rendered
+            //you can hook into an after-render event, using "tock"
             .on('tick',function () {
                 this.context.clearRect(
                     0,
