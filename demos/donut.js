@@ -31,11 +31,11 @@ function load () {
     var data = [],
     ids=0,
     i,ln,
-    start_number=1;
+    start_number=4;
     for (i=0,ln=start_number;i<ln;i++) {
         data.push({
             'id' : ids++,
-            'value' : Math.random() * 1000
+            'value' : 0.25
         });
     }
 
@@ -44,45 +44,40 @@ function load () {
     //attributes allow c2 to perform eval 
     //optimizations so that generic 
     //setters can be avoided
-    var Rect = c2.element(function (context,d,i) {
-        context.fillRect(
-            this.x,
-            this.y,
-            this.w,
-            this.h
+    var Path = c2.element(function (context,d,i) {
+        //Path2D converts svg path string into something we can draw on canvas
+        context.fill(
+            new Path2D(this.d)
         );
     }).attributes({
-        'x' : c2.types.float,
-        'y' : c2.types.float,
-        'w' : c2.types.float,
-        'h' : c2.types.float
+        'd' : c2.types.string
     });
 
-    var direction = 1,
-    width = window.innerWidth-421,
+    var width = window.innerWidth-421,
     height = window.innerHeight,
     canvas = d3.select('canvas')
         .attr('height',height)
         .attr('width',width),
-    last_size= data.length;
+    last_size= data.length,
+    direction = 1;
 
 
 
     //bind event listeners for add/remove buttons
     d3.select('.add').on('click',function () {
+        direction=1;
         //add button doubles data
-        direction = 1;
         for (var i=0,ln=data.length;i<ln;i++) {
             data.push({
                 'id' : ids++,
-                'value' : Math.random() * 1000
+                'value' :0.25
             });
         }
         render();
     })
     d3.select('.remove').on('click',function () {
+        direction=-1;
         //remove button halves data
-        direction = -1;
         data.splice(data.length/2,data.length/2);
         render();
     });
@@ -92,14 +87,12 @@ function load () {
         console.error(data.length);
 
         var lastSize = last_size,
-        xScale = d3.scaleLinear()
-            .range([0,width])
-            .domain([0,data.length]),
-        yScale = d3.scaleLinear()
-            .range([0,height])
-            .domain([0,d3.max(data,function (d) {
+        arc = d3.arc()
+            .innerRadius(height/8)
+            .outerRadius(height/4),
+        total = d3.sum(data,function (d) {
             return d.value;
-        })]),
+        }),
 
 
 
@@ -108,36 +101,51 @@ function load () {
         //webgl may be supported later
         context = canvas.select(c2.Context2d)
             //tick is a custom event that is fired before the context is rendered
-            //you can hook into an after-render event, using "tock"
             .on('tick',function () {
                 this.context.clearRect(
                     0,
                     0,
                     this.canvas.width,
                     this.canvas.height
-                )
+                );
+                this.context.translate(
+                    width/2,
+                    height/2
+                );
+            })
+            //tock is called after the render is complete
+            .on('tock',function () {
+                this.context.translate(
+                    -width/2,
+                    -height/2
+                );
             }),
 
         //we bind the generated data
-        //to the custom Rect tag 
-        selection = context.selectAll(Rect)
+        //to the custom Path tag 
+        selection = context.selectAll(Path)
             .data(data,function (d,i) {
                 return d.id;
-            });
+            }),
+        nodes = selection.nodes(),
+        last_entered,
+        lastTargetEndAngle=0;
 
 
         //this works the same as d3!
         //we append Rect elements 
         //and merge them into the selection
-        selection.enter().append(Rect)
-        .attr('x',function (d,i) {
-            return width;
-        })
-        .attr('y',function (d) {
-            return (height-yScale(d.value)/2);
-        })
-        .attr('w',0)
-        .attr('h',0)
+        selection.enter().append(Path)
+            .attr('d',function (d,i) {
+                var last = nodes && nodes[i-1] || last_entered;
+                if (last) {
+                    this.startAngle = this.endAngle = last.endAngle;
+                } else {
+                    this.startAngle = this.endAngle = 0;
+                }
+                last_entered = this;
+                return null;
+            })
         .merge(selection)
 
         //PAUSE! you dont have to to use c2.animate(),
@@ -159,7 +167,7 @@ function load () {
         //selection.transition() will work too.
         .call(
             c2.animate()
-            .duration(20000)
+            .duration(5000)
             .ease(d3.easeElastic)
             .delay(function (d,i) {
                 if (direction === -1) {
@@ -169,21 +177,34 @@ function load () {
                 }
                 return Math.max(i/50,1);
             })
-            .to({
-                'x' : function (d,i) {
-                    return xScale(i);
-                },
-                'y' : function (d,i) {
-                    this._y = yScale(d.value);
-                    return height-this._y;
-                },
-                'w' : Math.max(
-                    width/data.length-0.5,0.1
-                ),
-                'h' : function (d,i) {
-                    return this._y;
-                }
-            })
+            //tween allows us to use a non-generated
+            //tweening function - you could do
+            //this same code by using the "to"
+            //method to inerpolate the start and end angles
+            //and then computing the arc in the render fn
+            .tween(
+                'd',
+                function (d,i) {
+                    var me = this,
+                    targetStartAngle = lastTargetEndAngle+0.1,
+                    targetEndAngle = lastTargetEndAngle+d.value/total*Math.PI*2,
+                    interpolateStart = d3.interpolateNumber(
+                        this.startAngle,
+                        targetStartAngle
+                    ),
+                    interpolateEnd = d3.interpolateNumber(
+                        this.endAngle,
+                        Math.max(
+                            targetEndAngle,
+                            targetStartAngle+0.01
+                        )
+                    );
+                    lastTargetEndAngle = targetEndAngle;
+                    return function (t) {
+                        //use setAttribute to trigger canvas invalidation
+                        me.setAttribute('d',arc.startAngle(me.startAngle=interpolateStart(t)).endAngle(me.endAngle=interpolateEnd(t))());
+                    };
+                })
         );
 
 
@@ -194,18 +215,37 @@ function load () {
         selection.exit()
             .call(
                 c2.animate()
-                .duration(2000)
+                .duration(5000)
                 .delay(function (d,i) {
                     return Math.max(
                         (last_size-1)/50,1
                     )
                 })
                 .ease(d3.easeElastic)
-                .to({
-                    'x' : width +100,
-                    'w' : 0,
-                    'h' : 0
-                })
+                .tween(
+                    'd',
+                    function (d,i) {
+                        var me = this,
+                        interpolateStart=d3.interpolateNumber(
+                            this.startAngle,
+                            Math.PI*2
+                        ),
+                        interpolateEnd = d3.interpolateNumber(
+                            this.endAngle,
+                            Math.PI*2
+                        );
+                        return function (t) {
+                            //setAttribute again to trigger canvas invalidation
+                             me.setAttribute('d',arc
+                                .startAngle(
+                                    me.startAngle=interpolateStart(t)
+                                )
+                                .endAngle(
+                                    me.endAngle=interpolateEnd(t)
+                             )());
+                        };
+                    }
+                )
                 .remove()
             )
 

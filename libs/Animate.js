@@ -94,6 +94,9 @@ function c2_remove () {
     return this;
 }
 function c2_on (name,fn) {
+    //i think we can just hook into event system by passing an additional tween that only does something
+    //when t === 1, the only issue i see is that this woudl exist for all nodes -- if we use id like d3.transition,
+    //because each node needs a delay and duration - which means every node could be removed at a different time
     if (name === 'end') {
         !this._on_end && (this._on_end = [fn]) || this._on_end.push(fn);
     } else if (name === 'start') {
@@ -102,8 +105,10 @@ function c2_on (name,fn) {
     return this;
 }
 
+//TODO we need to separate the on_end and remove logic from compile and either put it into tween or hook it directly into 
+//the scheduler
 function c2_compile () {
-    var me=this,p,to=this._to,result='(function (to,n) {return function (d,i) {',
+    var me=this,p,to=this._to,result='(function (to) {return function (d,i) {',
     vars = ['var me=this'],
     interpolators = [],
     tween = [],
@@ -144,30 +149,19 @@ function c2_compile () {
     }
     result += vars.join(',') + ';';
     result += interpolators.join('');
-    result += 'return function (t,e) {'+
+    result += 'return function (t) {'+
         'var m = me;';
 
     result += tween.join('');
     //result += 'if (m._not_invalid_) { m._not_invalid_=0;m._invalid_cleanup[m._invalid_cleanup.index++]=m;m.parentNode._not_invalid_&&m.parentNode.invalidate()};'
     result += 'm._not_invalid_&&m.parentNode&&m._invalidate();'
     //result += 'm._not_invalid_&& (m._not_invalid_=0,m._invalid_cleanup[me._invalid_cleanup.index++],m.parentNode._not_invalid_&&m.parentNode.invalidate());'
-    result += 'e&&n(m,d,i);'
+    //result += 'e&&n(m,d,i);'
     result += '}'
 
     //}
     result += '}})';
-    return this._compiled_fn = (0,eval)(result)(to,function (node,d,i) {
-        var end;
-        if (me._remove) {
-            node.parentNode && node.parentNode.removeChild(node);
-        }
-        if (end = me._on_end) {
-            var i,ln;
-            for (i=0,ln=end.length;i<ln;i++) {
-                end.call(node,d,i,g);
-            }
-        }
-    });
+    return this._compiled_fn = (0,eval)(result)(to);
 }
 
 function c2_to (name,value) {
@@ -251,17 +245,19 @@ function c2_tween (name,tween) {
 }
 
 
-window.start_durations=[],
-window.available_start_indices=[],
-window.available_start_cnt=0,
-window.available_invalid = true;
-window.ordered_available = [];
-window.start_duration_end_index=-1,
-window.ease_groups = [],
-window.pending=[],
-window.pending_cnt = 0,
-window.start_duration_map = {},
-window.available={};
+var start_durations=[],
+available_start_indices=[],
+available_start_cnt=0,
+available_invalid = true,
+ordered_available = [],
+ordered_available_cnt=0,
+ordered_available_start=0,
+start_duration_end_index=-1,
+ease_groups = [],
+pending=[],
+pending_cnt = 0,
+start_duration_map = {},
+available={};
 var transitionIds=1,
 c2_timer_running = false;
 
@@ -273,8 +269,11 @@ function add_pending (date) {
     _ease_groups = ease_groups,
     _pending = pending,
     _tweens,_name,twln,p,
+    _remove,
+    _end,
     ease_group,
     names,
+    endGroup,
     start_duration_key,
     index,
     stamp = date,
@@ -282,19 +281,26 @@ function add_pending (date) {
     bundle,
     selection;
 
-    if (available_invalid) {
+    if (start_duration_end_index === -1) {
+        if (available_invalid) {
+            available_invalid = false;
+            ordered_available_start=ordered_available_cnt=0;
+        }
+    } else if (available_invalid) {
         available_invalid = false;
         if (start_duration_end_index===-1) {
-            available_start_cnt=0;
+            ordered_available_start=ordered_available_cnt=0;
         } else {
-            window.ordered_available = [];
+            ordered_available_start=ordered_available_cnt=0;
+            //window.ordered_available = [];
             for (i=0,ln=available_start_indices.length;i<ln;i++) {
                 if (available_start_indices[i]) {
                     j = i*2;
-                    if (j > start_duration_end_index) {
+                    if (j >= start_duration_end_index) {
                         break;
                     } else {
-                        ordered_available.push(j);
+                        ordered_available[ordered_available_cnt++]=j;
+                        //ordered_available.push(j);
                     }
                 }
             }
@@ -313,6 +319,8 @@ function add_pending (date) {
         _duration = animation._duration;
         _tweens = animation._tweens;
         _name = animation._name;
+        _remove = animation._remove;
+        _end = animation._on_end;
         //console.error(selection);
 
         ease = animation._ease;
@@ -324,13 +332,15 @@ function add_pending (date) {
             group = groups[j];
             for (k=0,kln=group.length;k<kln;k++) {
                 if (item = group[k]) {
-                    if (item._c2_transition) {
-                        names = item._c2_transition;
-                        tweens = names[_name];
-                        if (tweens !== undefined) {
+                    if (names = item._c2_transition) {
+                        if (tweens = names[_name]) {
                             tween_group = tweens.tween_group;
                             //console.error('falsing',tween_group.cnt);
 
+                            //TODO if tweens onEnd/remove - remove tweens from eventGroup
+                            if (tweens.end_index !== -1) {
+                                tweens.end_group[tweens.end_index]=0;
+                            }
 
                             for (m=0,mln=tweens.length;m<mln;m++) {
                                 tween_group[tweens[m]] = 0;
@@ -364,10 +374,13 @@ function add_pending (date) {
                     }
                     start_duration_key = delay + '-' + duration;
                     if ( !(ease_group = start_duration_map[start_duration_key])) {
-                        if (available_start_cnt > 0) {
-                            index = ordered_available.shift();
+                        if (ordered_available_cnt) {
+                            index = ordered_available[ordered_available_start++];
+                            ordered_available_cnt--;
+                            //ordered_available_cnt--;
+                            //index = ordered_available.shift();
                             available_start_indices[index/2]=0;
-                            available_start_cnt--;
+                            //available_start_cnt--;
                             //index = start_durations.indexOf(-1);
                             //for (p in available) {
                                 //console.error('taking p');
@@ -384,7 +397,8 @@ function add_pending (date) {
                             index = start_duration_end_index + 1;
                         } 
 
-                        ease_group = _ease_groups[index/2] = start_duration_map[start_duration_key] = [ease,tween_group=[]];
+                        //undefined is for the event group, which may or may not exist
+                        ease_group = _ease_groups[index/2] = start_duration_map[start_duration_key] = [undefined,ease,tween_group=[]]; 
                         tween_group.cnt =0
                         //tween_group.key = start_duration_key;
                         //tween_group.index = index;
@@ -413,6 +427,24 @@ function add_pending (date) {
                     //if ((tweens = names[_name]) === undefined) {
                     tweens = names[_name] = [];
                     tweens.tween_group = tween_group;
+                    tweens.node = item;
+                    if (_remove || _end) {
+                        tweens.remove = _remove;
+                        tweens.end = _end;
+                        tweens.index = k;
+                        if (!(endGroup = ease_group[0])) {
+                            tweens.end_group = ease_group[0] = [tweens];
+                            tweens.end_index = 0;
+                        } else {
+                            tweens.end_index = endGroup.push(tweens)-1;
+                            tweens.end_group = endGroup;
+                        }
+                    } else {
+                        tweens.end_index=-1;
+                    }
+
+                    //TODO --
+
                     //}
                     for (m=0,mln=_tweens.length;m<mln;m++) {
                         tweens[m] = tween_group.push(_tweens[m].call(item,item.__data__,k,group))-1;
@@ -432,7 +464,7 @@ function add_pending (date) {
 
 function start_c2_timer () {
     var i,ln,j,jln,group,groups,g,
-    k,kln,m,mln,
+    k,kln,m,mln,end,
     item,
     date = Date.now(),
     start = 0,
@@ -456,12 +488,12 @@ function start_c2_timer () {
                     t = (date-start) / duration; 
                     (t >= 1) && (e = t = 1);
                     if (group = ease_groups[g]) {
-                        for (j=0,jln=group.length;j<jln;j+=2) {
+                        for (j=1,jln=group.length;j<jln;j+=2) {
                             tweens = group[j+1];
                             if ( kln=tweens.length) {
                                 ease_value = group[j](t);
                                 for (k=0;k<kln;k++) {
-                                    (tween = tweens[k]) && tween(ease_value,e);
+                                    (tween = tweens[k]) && tween(ease_value);
                                 }
                             }
                         }
@@ -471,9 +503,24 @@ function start_c2_timer () {
                 }
                 if (e) {
                     e=0;
-                    available_start_cnt++;
+                    //available_start_cnt++;
                     !available_invalid && (available_invalid = true);
                     available_start_indices[(i-1)/2]=1;
+                    if (group=group[0]) {
+                        for (j=0,jln=group.length;j<jln;j++) {
+                            if (tweens=group[j]) {
+                                item = tweens.node;
+                                if (end=tweens.end) {
+                                    for (k=0,kln=end.length;k<kln;k++) {
+                                        end[k].call(item,item.__data__,tweens.index);
+                                    }
+                                }
+                                if (tweens.remove) {
+                                    item.parentNode && item.parentNode.removeChild(item);
+                                }
+                            }
+                        }
+                    }
                     //available_start_indices.push(i-1);
                     //if (i-1 > available_start_indices[0]) {
                         //available_start_indices.push(i-1);
