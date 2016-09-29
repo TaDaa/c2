@@ -71,6 +71,7 @@ api/docs
 
 ### Demos (with code)
 1) <a href="https://tadaa.github.io/c2/demos/bars.html" target="_blank">Bars</a>
+
 2) <a href="https://tadaa.github.io/c2/demos/donut.html" target="_blank">Donut (uses d3.arc/svg path rendered to canvas)</a>
 
 
