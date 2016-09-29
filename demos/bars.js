@@ -159,7 +159,7 @@ function load () {
         //selection.transition() will work too.
         .call(
             c2.animate()
-            .duration(20000)
+            .duration(2000)
             .ease(d3.easeElastic)
             .delay(function (d,i) {
                 if (direction === -1) {
