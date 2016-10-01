@@ -12,8 +12,6 @@ c2.Drawable = require('./Drawable');
 c2.Context2d = require('./Context2d');
 c2.Layer2d = require('./Layer2d');
 c2.createElement = require('./createElement');
-//TODO
-//c2.optimize = require('./Optimize');
 
 
 module.exports = c2;

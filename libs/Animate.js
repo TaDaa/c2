@@ -25,7 +25,7 @@ function c2_Animate (name) {
             'animation' : animation
         };
         !c2_timer_running && (c2_timer_running = true,invalidate.nextCalculate(start_c2_timer));
-        !c2_timer_running && (c2_timer_running = true,setTimeout(start_c2_timer));
+        //!c2_timer_running && (c2_timer_running = true,setTimeout(start_c2_timer));
         //!c2_timer_running && (c2_timer_running = true,requestAnimationFrame(start_c2_timer));
     }
     //animation._id = animateIds++;
@@ -108,7 +108,7 @@ function c2_on (name,fn) {
 //TODO we need to separate the on_end and remove logic from compile and either put it into tween or hook it directly into 
 //the scheduler
 function c2_compile () {
-    var me=this,p,to=this._to,result='(function (to) {return function (d,i) {',
+    var p,to=this._to,result='(function (to) {return function (d,i) {',
     vars = ['var me=this'],
     interpolators = [],
     tween = [],
@@ -131,7 +131,6 @@ function c2_compile () {
 
     compiled = this._compiled =  {};
 
-    //if (to = this._to) {
     for (p in to) {
         compiled[p] = to[p];
         vars.push('s'+cnt+'=this["'+p+'"]',
@@ -140,10 +139,7 @@ function c2_compile () {
         );
         interpolators.push(
             'if (t'+cnt+') {s'+cnt+'=s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
-            //'if (t'+cnt+'===true) {s'+cnt+'=s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
         )
-        //tween.push ('if (t'+cnt+') { m.setAttribute("'+p+'",s'+cnt+'+v'+cnt+'*t);} else {m["'+p+'"]=v'+cnt+'(t);}')
-        //tween.push ('(t'+cnt+') &&  ( m["'+p+'"]=s'+cnt+'+v'+cnt+'*t,true) || (m["'+p+'"]=v'+cnt+'(t));')
         tween.push ('if (t'+cnt+') m["'+p+'"]=s'+cnt+'+v'+cnt+'*t; else m["'+p+'"]=v'+cnt+'(t);')
         cnt++;
     }
@@ -153,13 +149,9 @@ function c2_compile () {
         'var m = me;';
 
     result += tween.join('');
-    //result += 'if (m._not_invalid_) { m._not_invalid_=0;m._invalid_cleanup[m._invalid_cleanup.index++]=m;m.parentNode._not_invalid_&&m.parentNode.invalidate()};'
-    result += 'm._not_invalid_&&m.parentNode&&m._invalidate();'
-    //result += 'm._not_invalid_&& (m._not_invalid_=0,m._invalid_cleanup[me._invalid_cleanup.index++],m.parentNode._not_invalid_&&m.parentNode.invalidate());'
-    //result += 'e&&n(m,d,i);'
-    result += '}'
+    result += 'm._not_invalid_&&m.parentNode&&m._invalidate();';
+    result += '}';
 
-    //}
     result += '}})';
     return this._compiled_fn = (0,eval)(result)(to);
 }
@@ -175,6 +167,16 @@ function c2_to (name,value) {
     }
     return this;
 }
+//TODO animation chaining
+function c2_animate_Animate () {
+    //var animate = c2_Animate();
+    //this.on('end',function () {
+        //add ended nodes
+    //})
+}
+
+
+//probably do some variation of to2 in each statement (groups of 1ish)
 function c2_to2 (name,value) {
     if (arguments.length > 1) { 
         if (typeof value === 'function') {
@@ -247,7 +249,6 @@ function c2_tween (name,tween) {
 
 var start_durations=[],
 available_start_indices=[],
-available_start_cnt=0,
 available_invalid = true,
 ordered_available = [],
 ordered_available_cnt=0,
@@ -257,18 +258,15 @@ ease_groups = [],
 pending=[],
 pending_cnt = 0,
 start_duration_map = {},
-available={};
-var transitionIds=1,
 c2_timer_running = false;
 
 
 function add_pending (date) {
     var i,ln,j,jln,k,kln,m,mln,groups,group,item,tween_group,tweens,
     delay,duration,ease,_delay,_duration,delay_is_fn,duration_is_fn,
-    available_start_cnt,
     _ease_groups = ease_groups,
     _pending = pending,
-    _tweens,_name,twln,p,
+    _tweens,_name,
     _remove,
     _end,
     ease_group,
@@ -292,7 +290,6 @@ function add_pending (date) {
             ordered_available_start=ordered_available_cnt=0;
         } else {
             ordered_available_start=ordered_available_cnt=0;
-            //window.ordered_available = [];
             for (i=0,ln=available_start_indices.length;i<ln;i++) {
                 if (available_start_indices[i]) {
                     j = i*2;
@@ -300,15 +297,11 @@ function add_pending (date) {
                         break;
                     } else {
                         ordered_available[ordered_available_cnt++]=j;
-                        //ordered_available.push(j);
                     }
                 }
             }
         }
-        //available_start_indices.sort();
     }
-    //console.error(ordered_available);
-    //return;
     for (i=0,ln=pending_cnt;i<ln;i++) {
         bundle = _pending[i];
         animation = bundle.animation
@@ -321,7 +314,6 @@ function add_pending (date) {
         _name = animation._name;
         _remove = animation._remove;
         _end = animation._on_end;
-        //console.error(selection);
 
         ease = animation._ease;
 
@@ -335,7 +327,6 @@ function add_pending (date) {
                     if (names = item._c2_transition) {
                         if (tweens = names[_name]) {
                             tween_group = tweens.tween_group;
-                            //console.error('falsing',tween_group.cnt);
 
                             //TODO if tweens onEnd/remove - remove tweens from eventGroup
                             if (tweens.end_index !== -1) {
@@ -347,18 +338,7 @@ function add_pending (date) {
                             }
 
                             if (tween_group.cnt !== 0 && (tween_group.cnt -= mln) <= 0 ) {
-                                //console.error('stopping');
-
                                 tween_group.cnt=tween_group.length=0;
-                                //delete start_duration_map[tween_group.key];
-                                //index = tween_group.index-1;
-                                //ease_groups[index/2].length=0;
-                                //start_durations[index]=start_durations[index+1] = -1;
-                                //available_start_indices.push(index);
-                                //available_start_cnt++;
-
-                                //start_durations[tween_]
-
                             }
                         }
                     } 
@@ -377,31 +357,14 @@ function add_pending (date) {
                         if (ordered_available_cnt) {
                             index = ordered_available[ordered_available_start++];
                             ordered_available_cnt--;
-                            //ordered_available_cnt--;
-                            //index = ordered_available.shift();
                             available_start_indices[index/2]=0;
-                            //available_start_cnt--;
-                            //index = start_durations.indexOf(-1);
-                            //for (p in available) {
-                                //console.error('taking p');
-                                //index = p;
-                                //delete available[p];
-                                //available_start_cnt--;
-                                //break;
-                            //}
-                            //console.error('a',index);
-                            //index = available_start_indices.shift();
-                            //available_start_cnt--;
-                            //available_start_indices[--available_start_cnt];
                         } else {
                             index = start_duration_end_index + 1;
                         } 
 
                         //undefined is for the event group, which may or may not exist
                         ease_group = _ease_groups[index/2] = start_duration_map[start_duration_key] = [undefined,ease,tween_group=[]]; 
-                        tween_group.cnt =0
-                        //tween_group.key = start_duration_key;
-                        //tween_group.index = index;
+                        tween_group.cnt =0;
 
                         start_durations[index] =  delay;
                         start_durations[++index] = duration;
@@ -416,15 +379,12 @@ function add_pending (date) {
                         } else {
                             ease_group.push(ease,tween_group=[]);
                             tween_group.cnt=0;
-                            //tween_group.key = start_duration_key;
-                            //tween_group.index = ease_group.index;
                         }
                     }
                     names = item._c2_transition;
                     if (!names) {
                         names = item._c2_transition = {};
                     }
-                    //if ((tweens = names[_name]) === undefined) {
                     tweens = names[_name] = [];
                     tweens.tween_group = tween_group;
                     tweens.node = item;
@@ -463,15 +423,15 @@ function add_pending (date) {
 
 
 function start_c2_timer () {
-    var i,ln,j,jln,group,groups,g,
-    k,kln,m,mln,end,
+    var i,ln,j,jln,group,g,
+    k,kln,end,
     item,
     date = Date.now(),
     start = 0,
     t=0,e=0,
     ease_value,
     duration,tween,
-    tweens,tween_group,
+    tweens,
     cleanup = 0;
 
     //first check pending
@@ -503,7 +463,6 @@ function start_c2_timer () {
                 }
                 if (e) {
                     e=0;
-                    //available_start_cnt++;
                     !available_invalid && (available_invalid = true);
                     available_start_indices[(i-1)/2]=1;
                     if (group=group[0]) {
@@ -521,22 +480,9 @@ function start_c2_timer () {
                             }
                         }
                     }
-                    //available_start_indices.push(i-1);
-                    //if (i-1 > available_start_indices[0]) {
-                        //available_start_indices.push(i-1);
-                    //} else {
-                        //available_start_indices.unshift(i-1);
-                    //}
-                    //available[i-1]=true;
-                    //available_start_indices[i-1] = true;
-                    //available_start_indices.push(i-1);
-                    //available_start_indices[available_start_cnt++]=i-1;
-                    //console.error(i-1);
-                    //available_start_indices.push(i-1);
                     delete start_duration_map[start_durations[i-1]+'-'+start_durations[i]];
                     start_durations[i-1] =  start_durations[i] = -1;
                     ease_groups[g] = false;
-                    //ease_groups[g].length = 0;
                     i === start_duration_end_index && (cleanup = 1);
                 }
             }
@@ -547,14 +493,11 @@ function start_c2_timer () {
                 if (start_durations[i] !== -1) {
                     start_duration_end_index = i+1;
                     break;
-                    //return;
                 }
             }
-            //console.error(i);
-            if (i<=-1) start_duration_end_index=-1
+            if (i<=-1) start_duration_end_index=-1;
         }
     }
-    //console.error(new Date()-date);
 
     if (pending_cnt > 0 || start_duration_end_index > 0) {
         invalidate.nextCalculate(start_c2_timer);

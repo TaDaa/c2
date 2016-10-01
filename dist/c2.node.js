@@ -66,8 +66,6 @@ module.exports =
 	c2.Context2d = __webpack_require__(8);
 	c2.Layer2d = __webpack_require__(10);
 	c2.createElement = __webpack_require__(9);
-	//TODO
-	//c2.optimize = require('./Optimize');
 
 
 	module.exports = c2;
@@ -105,7 +103,7 @@ module.exports =
 	            'animation' : animation
 	        };
 	        !c2_timer_running && (c2_timer_running = true,invalidate.nextCalculate(start_c2_timer));
-	        !c2_timer_running && (c2_timer_running = true,setTimeout(start_c2_timer));
+	        //!c2_timer_running && (c2_timer_running = true,setTimeout(start_c2_timer));
 	        //!c2_timer_running && (c2_timer_running = true,requestAnimationFrame(start_c2_timer));
 	    }
 	    //animation._id = animateIds++;
@@ -188,7 +186,7 @@ module.exports =
 	//TODO we need to separate the on_end and remove logic from compile and either put it into tween or hook it directly into 
 	//the scheduler
 	function c2_compile () {
-	    var me=this,p,to=this._to,result='(function (to) {return function (d,i) {',
+	    var p,to=this._to,result='(function (to) {return function (d,i) {',
 	    vars = ['var me=this'],
 	    interpolators = [],
 	    tween = [],
@@ -211,7 +209,6 @@ module.exports =
 
 	    compiled = this._compiled =  {};
 
-	    //if (to = this._to) {
 	    for (p in to) {
 	        compiled[p] = to[p];
 	        vars.push('s'+cnt+'=this["'+p+'"]',
@@ -220,10 +217,7 @@ module.exports =
 	        );
 	        interpolators.push(
 	            'if (t'+cnt+') {s'+cnt+'=s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
-	            //'if (t'+cnt+'===true) {s'+cnt+'=s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
 	        )
-	        //tween.push ('if (t'+cnt+') { m.setAttribute("'+p+'",s'+cnt+'+v'+cnt+'*t);} else {m["'+p+'"]=v'+cnt+'(t);}')
-	        //tween.push ('(t'+cnt+') &&  ( m["'+p+'"]=s'+cnt+'+v'+cnt+'*t,true) || (m["'+p+'"]=v'+cnt+'(t));')
 	        tween.push ('if (t'+cnt+') m["'+p+'"]=s'+cnt+'+v'+cnt+'*t; else m["'+p+'"]=v'+cnt+'(t);')
 	        cnt++;
 	    }
@@ -233,13 +227,9 @@ module.exports =
 	        'var m = me;';
 
 	    result += tween.join('');
-	    //result += 'if (m._not_invalid_) { m._not_invalid_=0;m._invalid_cleanup[m._invalid_cleanup.index++]=m;m.parentNode._not_invalid_&&m.parentNode.invalidate()};'
-	    result += 'm._not_invalid_&&m.parentNode&&m._invalidate();'
-	    //result += 'm._not_invalid_&& (m._not_invalid_=0,m._invalid_cleanup[me._invalid_cleanup.index++],m.parentNode._not_invalid_&&m.parentNode.invalidate());'
-	    //result += 'e&&n(m,d,i);'
-	    result += '}'
+	    result += 'm._not_invalid_&&m.parentNode&&m._invalidate();';
+	    result += '}';
 
-	    //}
 	    result += '}})';
 	    return this._compiled_fn = (0,eval)(result)(to);
 	}
@@ -255,6 +245,16 @@ module.exports =
 	    }
 	    return this;
 	}
+	//TODO animation chaining
+	function c2_animate_Animate () {
+	    //var animate = c2_Animate();
+	    //this.on('end',function () {
+	        //add ended nodes
+	    //})
+	}
+
+
+	//probably do some variation of to2 in each statement (groups of 1ish)
 	function c2_to2 (name,value) {
 	    if (arguments.length > 1) { 
 	        if (typeof value === 'function') {
@@ -327,7 +327,6 @@ module.exports =
 
 	var start_durations=[],
 	available_start_indices=[],
-	available_start_cnt=0,
 	available_invalid = true,
 	ordered_available = [],
 	ordered_available_cnt=0,
@@ -337,18 +336,15 @@ module.exports =
 	pending=[],
 	pending_cnt = 0,
 	start_duration_map = {},
-	available={};
-	var transitionIds=1,
 	c2_timer_running = false;
 
 
 	function add_pending (date) {
 	    var i,ln,j,jln,k,kln,m,mln,groups,group,item,tween_group,tweens,
 	    delay,duration,ease,_delay,_duration,delay_is_fn,duration_is_fn,
-	    available_start_cnt,
 	    _ease_groups = ease_groups,
 	    _pending = pending,
-	    _tweens,_name,twln,p,
+	    _tweens,_name,
 	    _remove,
 	    _end,
 	    ease_group,
@@ -372,7 +368,6 @@ module.exports =
 	            ordered_available_start=ordered_available_cnt=0;
 	        } else {
 	            ordered_available_start=ordered_available_cnt=0;
-	            //window.ordered_available = [];
 	            for (i=0,ln=available_start_indices.length;i<ln;i++) {
 	                if (available_start_indices[i]) {
 	                    j = i*2;
@@ -380,15 +375,11 @@ module.exports =
 	                        break;
 	                    } else {
 	                        ordered_available[ordered_available_cnt++]=j;
-	                        //ordered_available.push(j);
 	                    }
 	                }
 	            }
 	        }
-	        //available_start_indices.sort();
 	    }
-	    //console.error(ordered_available);
-	    //return;
 	    for (i=0,ln=pending_cnt;i<ln;i++) {
 	        bundle = _pending[i];
 	        animation = bundle.animation
@@ -401,7 +392,6 @@ module.exports =
 	        _name = animation._name;
 	        _remove = animation._remove;
 	        _end = animation._on_end;
-	        //console.error(selection);
 
 	        ease = animation._ease;
 
@@ -415,7 +405,6 @@ module.exports =
 	                    if (names = item._c2_transition) {
 	                        if (tweens = names[_name]) {
 	                            tween_group = tweens.tween_group;
-	                            //console.error('falsing',tween_group.cnt);
 
 	                            //TODO if tweens onEnd/remove - remove tweens from eventGroup
 	                            if (tweens.end_index !== -1) {
@@ -427,18 +416,7 @@ module.exports =
 	                            }
 
 	                            if (tween_group.cnt !== 0 && (tween_group.cnt -= mln) <= 0 ) {
-	                                //console.error('stopping');
-
 	                                tween_group.cnt=tween_group.length=0;
-	                                //delete start_duration_map[tween_group.key];
-	                                //index = tween_group.index-1;
-	                                //ease_groups[index/2].length=0;
-	                                //start_durations[index]=start_durations[index+1] = -1;
-	                                //available_start_indices.push(index);
-	                                //available_start_cnt++;
-
-	                                //start_durations[tween_]
-
 	                            }
 	                        }
 	                    } 
@@ -457,31 +435,14 @@ module.exports =
 	                        if (ordered_available_cnt) {
 	                            index = ordered_available[ordered_available_start++];
 	                            ordered_available_cnt--;
-	                            //ordered_available_cnt--;
-	                            //index = ordered_available.shift();
 	                            available_start_indices[index/2]=0;
-	                            //available_start_cnt--;
-	                            //index = start_durations.indexOf(-1);
-	                            //for (p in available) {
-	                                //console.error('taking p');
-	                                //index = p;
-	                                //delete available[p];
-	                                //available_start_cnt--;
-	                                //break;
-	                            //}
-	                            //console.error('a',index);
-	                            //index = available_start_indices.shift();
-	                            //available_start_cnt--;
-	                            //available_start_indices[--available_start_cnt];
 	                        } else {
 	                            index = start_duration_end_index + 1;
 	                        } 
 
 	                        //undefined is for the event group, which may or may not exist
 	                        ease_group = _ease_groups[index/2] = start_duration_map[start_duration_key] = [undefined,ease,tween_group=[]]; 
-	                        tween_group.cnt =0
-	                        //tween_group.key = start_duration_key;
-	                        //tween_group.index = index;
+	                        tween_group.cnt =0;
 
 	                        start_durations[index] =  delay;
 	                        start_durations[++index] = duration;
@@ -496,15 +457,12 @@ module.exports =
 	                        } else {
 	                            ease_group.push(ease,tween_group=[]);
 	                            tween_group.cnt=0;
-	                            //tween_group.key = start_duration_key;
-	                            //tween_group.index = ease_group.index;
 	                        }
 	                    }
 	                    names = item._c2_transition;
 	                    if (!names) {
 	                        names = item._c2_transition = {};
 	                    }
-	                    //if ((tweens = names[_name]) === undefined) {
 	                    tweens = names[_name] = [];
 	                    tweens.tween_group = tween_group;
 	                    tweens.node = item;
@@ -543,15 +501,15 @@ module.exports =
 
 
 	function start_c2_timer () {
-	    var i,ln,j,jln,group,groups,g,
-	    k,kln,m,mln,end,
+	    var i,ln,j,jln,group,g,
+	    k,kln,end,
 	    item,
 	    date = Date.now(),
 	    start = 0,
 	    t=0,e=0,
 	    ease_value,
 	    duration,tween,
-	    tweens,tween_group,
+	    tweens,
 	    cleanup = 0;
 
 	    //first check pending
@@ -583,7 +541,6 @@ module.exports =
 	                }
 	                if (e) {
 	                    e=0;
-	                    //available_start_cnt++;
 	                    !available_invalid && (available_invalid = true);
 	                    available_start_indices[(i-1)/2]=1;
 	                    if (group=group[0]) {
@@ -601,22 +558,9 @@ module.exports =
 	                            }
 	                        }
 	                    }
-	                    //available_start_indices.push(i-1);
-	                    //if (i-1 > available_start_indices[0]) {
-	                        //available_start_indices.push(i-1);
-	                    //} else {
-	                        //available_start_indices.unshift(i-1);
-	                    //}
-	                    //available[i-1]=true;
-	                    //available_start_indices[i-1] = true;
-	                    //available_start_indices.push(i-1);
-	                    //available_start_indices[available_start_cnt++]=i-1;
-	                    //console.error(i-1);
-	                    //available_start_indices.push(i-1);
 	                    delete start_duration_map[start_durations[i-1]+'-'+start_durations[i]];
 	                    start_durations[i-1] =  start_durations[i] = -1;
 	                    ease_groups[g] = false;
-	                    //ease_groups[g].length = 0;
 	                    i === start_duration_end_index && (cleanup = 1);
 	                }
 	            }
@@ -627,14 +571,11 @@ module.exports =
 	                if (start_durations[i] !== -1) {
 	                    start_duration_end_index = i+1;
 	                    break;
-	                    //return;
 	                }
 	            }
-	            //console.error(i);
-	            if (i<=-1) start_duration_end_index=-1
+	            if (i<=-1) start_duration_end_index=-1;
 	        }
 	    }
-	    //console.error(new Date()-date);
 
 	    if (pending_cnt > 0 || start_duration_end_index > 0) {
 	        invalidate.nextCalculate(start_c2_timer);
@@ -670,10 +611,7 @@ module.exports =
 	        if (c2_invalidate.t2) {
 	            calculate = fn;
 	        } else {
-	            //calculate = fn;
-	            //c2_invalidate.t2 = true;
 	            setTimeout(fn,4);
-	            //requestAnimationFrame(c2_do_invalidate);
 	        }
 	}
 
@@ -687,17 +625,17 @@ module.exports =
 	    }
 	}
 
-	var last;
+	//var last;
 	function c2_do_invalidate () {
 	    c2_invalidate.t2 = false;
 
+	    //measure time between frames - chrome seems to have some rendering bugs with hardware acceleration and canvases larger than a certain area causing time between frames to double (quite unfortunate)
 	    //console.error('f',new Date()-last);
 	    //var start = last= new Date();
 	    if (calculate) {
 	        waiting_calculate=true;
 	        setTimeout(schedule_calculate,4);
 	    }
-	    //start = new Date();
 
 
 
@@ -830,17 +768,15 @@ module.exports =
 	c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 	c2_Base.prototype.invalidate = c2_invalidate;
 	c2_Base.prototype._invalidate = c2_pre_checked_invalidate;
-	//c2_Base.prototype.invalidate2 = c2_invalidate2;
 	c2_Base.prototype._events = undefined;
 
 
 
 	function c2_appendChild (drawable) {
 	    drawable.parentNode && drawable.parentNode.removeChild(drawable);
-	    var children=this.children,result;
+	    var children=this.children;
 	    if (!children) {
 	        children = this.children = [];
-	        //this.__changed__ = [];
 	    }
 
 	    drawable.parentIndex=children.push(drawable)-1;
@@ -864,7 +800,6 @@ module.exports =
 
 	    if (!children) {
 	        children = this.children = [];
-	        //this.__changed__ = [];
 	    }
 
 	    if (referenceNode && referenceNode.parentNode === this) {
@@ -962,7 +897,6 @@ module.exports =
 	}
 
 	function c2_setAttribute (name,value) {
-	    //(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));
 	    var k = name,v=value;
 	    this[k] = v;
 	    this._not_invalid_ && (this._invalidate());
@@ -995,23 +929,6 @@ module.exports =
 
 	c2_invalidate.compiled = c2_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
 
-	/*
-	 *function c2_invalidate2 (n) {
-	 *    if (n._invalid_ === 0) {
-	 *        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
-	 *        n._invalid_ = 1;
-	 *
-	 *        if (n.parentNode.__changed__) {
-	 *            (n.parentNode._invalid_ === 0) && n.parentNode.invalidate();
-	 *            n.parentNode.__changed__.push(n);
-	 *        } else {
-	 *            n.parentNode.__changed__ = [n];
-	 *            (n.parentNode._invalid_ === 0) && n.parentNode.invalidate();
-	 *        }
-	 *    }
-	 *}
-	 *c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
-	 */
 
 	module.exports = c2_Base;
 
@@ -1025,9 +942,7 @@ module.exports =
 
 
 	function c2_Drawable (render) {
-	    var p,
-	    id = this.registry.push(this)-1,
-	    me = this;
+	    var id = this.registry.push(this)-1;
 
 	    this._c2_proto = this;
 	    this._c2_id =  id;
@@ -1051,7 +966,6 @@ module.exports =
 
 	function c2_renderable_attributes (attributes) {
 	    var p,
-	    cnt=0,
 	    setter = [],
 	    getter = [],
 	    remover = [],
@@ -1065,11 +979,8 @@ module.exports =
 	        remover.push('if (n === "'+p+'") {this["'+p+'"]=null;}');
 	        getter.push('if (n === "'+p+'") {return this["'+p+'"];}');
 	    }
-	    //this.setAttribute = (0,eval)('(function c2_setAttribute1 (k,b) {var n=k,v=b; (this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start))) ;' + setter.join('else ') + 'else {this[n]=v;} ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
 	    this.setAttribute = (0,eval)('(function c2_setAttribute (k,b) {var n=k,v=b; ' + setter.join('else ') + 'else {this[n]=v;} ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
 	    //this.setAttribute = (0,eval)('(function c2_setAttribute (k,b) {var n=k,v=b;this[n]=v; ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
-	    //this.setAttribute = (0,eval)('(function c2_setAttribute (k,b) {(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));var n=k,v=b;this[n]=v; ' +  this.invalidate.compiled +  '})');//'(this._invalid_ === false) &&  this.invalidate() })');
-	    //console.error(this.setAttribute.toString());
 	    this.getAttribute = (0,eval)('(function (k) {var n=k;' +getter.join('else ')+' else {return this[n];}})');
 	    this.removeAttribute = (0,eval)('(function (k) {var n=k;' + remover.join('else ') + 'else {this[n]=null} if (this._not_invalid_) {' + this.invalidate.compiled+ '}})');
 
@@ -1095,20 +1006,6 @@ module.exports =
 	function c2_renderable_compile () {
 	    var p,
 	    renderable = "(function () {";
-	        //"var p;",
-	    //these are commented because I am still tinkering with this performance wise
-	    //"this.render=r.render;this.setAttribute=r.setAttribute;this.getAttribute=r.getAttribute;this.removeAttribute=r.removeAttribute;",
-	    //this is essentially a hack to give ~50% boost in iteration over relying on prototype inheritance
-	    //result;
-	    //item;
-	    //renderable+=
-	    //for (p in this) {
-	        //if (p !== 'render' && p !== 'setAttribute') {
-	            //renderable+='this["'+p+'"]=this["'+p+'"];'
-	        //}
-	    //}
-	    //"for (p in this) {this[p]=this[p]}";
-	    //"var attributes=this._attributes;for (p in attributes) {this[p]=attributes[p].defaultValue;}"+
 	    var attributes = this._attributes,
 	    v;
 	    for (p in attributes) {
@@ -1125,30 +1022,6 @@ module.exports =
 	    "})";
 
 	    result = (0,eval)(renderable);
-	    //console.error(result.toString());
-	    //console.error(result.toString());
-	/*
-	 *    var me = this;
-	 *    var result =function () {
-	 *
-	 *        this._invalid_cleanup = this._invalid_cleanup;
-	 *        this._invalid_parents = this._invalid_parents;
-	 *        this._invalid_children = this._invalid_children;
-	 *        this._invalid_children_ = -1;
-	 *        this._invalid_ = 0;
-	 *
-	 *        this.render = this.render;
-	 *        this.invalidate = this.invalidate;
-	 *
-	 *        var p,attributes = this._attributes;
-	 *
-	 *        for (p in attributes) {
-	 *            this[p] = attributes[p].defaultValue;
-	 *        }
-	 *
-	 *        this._constructor && this._constructor();
-	 *    };
-	 */
 
 	    result.prototype = this;
 	    return result;
@@ -1279,16 +1152,6 @@ module.exports =
 	    result.ownerDocument = c2;
 	    return result;
 	};
-
-	function get_c2_renderable (result) {
-	    return function c2_renderable () {
-	        var r =result,p;
-	         for (p in r) {
-	             this[p] = r[p];
-	         }
-	         if (this._constructor !== undefined) {this._constructor();}
-	    };
-	}
 
 
 /***/ },

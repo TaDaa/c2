@@ -28,17 +28,15 @@ c2_Base.prototype.removeAttribute = c2_removeAttribute;
 c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
 c2_Base.prototype.invalidate = c2_invalidate;
 c2_Base.prototype._invalidate = c2_pre_checked_invalidate;
-//c2_Base.prototype.invalidate2 = c2_invalidate2;
 c2_Base.prototype._events = undefined;
 
 
 
 function c2_appendChild (drawable) {
     drawable.parentNode && drawable.parentNode.removeChild(drawable);
-    var children=this.children,result;
+    var children=this.children;
     if (!children) {
         children = this.children = [];
-        //this.__changed__ = [];
     }
 
     drawable.parentIndex=children.push(drawable)-1;
@@ -62,7 +60,6 @@ function c2_insertBefore (drawable,referenceNode) {
 
     if (!children) {
         children = this.children = [];
-        //this.__changed__ = [];
     }
 
     if (referenceNode && referenceNode.parentNode === this) {
@@ -160,7 +157,6 @@ function c2_removeEventListener (name,listener) {
 }
 
 function c2_setAttribute (name,value) {
-    //(this.parentNode && this.parentNode.children[0] === this) && (window.start=new Date()) || (this.parentNode && this.parentNode.children[this.parentNode.children.length-1] === this && (console.error(new Date() - window.start)));
     var k = name,v=value;
     this[k] = v;
     this._not_invalid_ && (this._invalidate());
@@ -193,22 +189,5 @@ function c2_invalidate () {
 
 c2_invalidate.compiled = c2_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
 
-/*
- *function c2_invalidate2 (n) {
- *    if (n._invalid_ === 0) {
- *        n._invalid_cleanup[n._invalid_cleanup.index++]=n;
- *        n._invalid_ = 1;
- *
- *        if (n.parentNode.__changed__) {
- *            (n.parentNode._invalid_ === 0) && n.parentNode.invalidate();
- *            n.parentNode.__changed__.push(n);
- *        } else {
- *            n.parentNode.__changed__ = [n];
- *            (n.parentNode._invalid_ === 0) && n.parentNode.invalidate();
- *        }
- *    }
- *}
- *c2_invalidate2.compiled = c2_invalidate2.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
- */
 
 module.exports = c2_Base;

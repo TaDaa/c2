@@ -21,9 +21,6 @@ var Rect = c2.element(function (context) {
 //and getAttribute functions.  Attributes are also used by c2.animate to
 //generate optimized tweening functions.  
 
-//c2.animate is uses its own internal scheduler, groups tweens by
-//start/duration/easing and is generally faster than d3.transition
-//as well as being easier on the garbage collector.
 
 
 
@@ -45,6 +42,10 @@ selection.enter()
   .attr('width',0)
   .attr('height',0)
 .merge(selection)
+
+//c2.animate is uses its own internal scheduler, groups tweens by
+//start/duration/easing and is generally faster than d3.transition
+//as well as being easier on the garbage collector.
 .call(c2.animate()
   .to({
     x : function (d,i) {return Math.random()*1000},
@@ -72,7 +73,7 @@ api/docs
 ### Demos (with code)
 1) <a href="https://tadaa.github.io/c2/demos/bars.html" target="_blank">Bars</a>
 
-2) <a href="https://tadaa.github.io/c2/demos/donut.html" target="_blank">Donut (uses d3.arc/svg path rendered to canvas)</a>
+2) <a href="https://tadaa.github.io/c2/demos/donut.html" target="_blank">Donut (uses Path2D for canvas with d3.arc)</a>
 
 
 

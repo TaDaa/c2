@@ -18,10 +18,7 @@ c2_invalidate.nextCalculate = function (fn) {
         if (c2_invalidate.t2) {
             calculate = fn;
         } else {
-            //calculate = fn;
-            //c2_invalidate.t2 = true;
             setTimeout(fn,4);
-            //requestAnimationFrame(c2_do_invalidate);
         }
 }
 
@@ -35,17 +32,17 @@ function schedule_calculate () {
     }
 }
 
-var last;
+//var last;
 function c2_do_invalidate () {
     c2_invalidate.t2 = false;
 
+    //measure time between frames - chrome seems to have some rendering bugs with hardware acceleration and canvases larger than a certain area causing time between frames to double (quite unfortunate)
     //console.error('f',new Date()-last);
     //var start = last= new Date();
     if (calculate) {
         waiting_calculate=true;
         setTimeout(schedule_calculate,4);
     }
-    //start = new Date();
 
 
 
