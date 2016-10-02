@@ -21,13 +21,7 @@ var Rect = c2.element(function (context) {
 //and getAttribute functions.  Attributes are also used by c2.animate to
 //generate optimized tweening functions.  
 
-
-
-
-
-
 //c2.Context2d is a custom tag provided by c2 that selects the 2d context from a canvas element
-
 var context = d3.select('canvas').select(c2.Context2d)
   //tick is an event that triggers before each render frame
   //if you need to use an after render event, use "tock"
@@ -108,3 +102,112 @@ All scripts:
 2) Make sure you install d3.js.  c2.js can be loaded before or after d3.
 
 3) Review demos and code away!
+
+
+
+
+###API
+
+#####c2.element(function(context,data,i)) - returns a new tag with the provided function for rendering
+######functions
+
+* attributes(object) - defines attributes intended to be used for rendering of the declared element.
+
+* constructor(function) - function is invoked when the element is first created
+
+* proto (object) - properties and values from proto are added to the element prototype
+
+* toString() - returns internal c2Id
+
+* compile() - internal use only, but returns the renderable object
+
+
+#####c2.create(function(context,data,i)) - alias for element
+
+
+
+
+####Classes
+#####c2.Context2d - Wrapper class for CanvasRenderingContext2D
+######events
+
+* tick(function) - function called before context2d renders
+
+* tock(function) - function called after context2d renders
+
+
+######attributes
+
+* fillStyle[string]
+
+* globalAlpha[string]
+
+* lineWidth[string]
+
+* strokeStyle[string]
+
+* shadowColor[string]
+
+* shadowBlur[string]
+
+* shadowOffsetX[string]
+
+* shadowOffsetY[string]
+
+
+#####functions (if using d3 - you should need to call these directly)
+
+* createElementNS (c2Tag|stringC2Id)
+
+* invalidate()
+
+* setAttribute(string,any)
+
+* getAttribute(string,any)
+
+* removeAttribute(string)
+
+* addEventListener(string,function)
+
+* removeEventListener(string,function)
+
+* querySelector(c2Tag)
+
+* querySelectorAll(c2Tag)
+
+* appendChild(c2Drawable)
+
+* insertBefore(c2Drawable)
+
+* removeChild(c2Drawable)
+
+
+
+
+#####c2.animate(transitionName) - callable optimized c2 transition for working with large data.  All of these should accept the same arguments as d3
+
+* delay (number|function) - time to wait before starting transition on c2 node
+
+* duration (number|function) - duration of transition on c2 node
+
+* ease (function) - easing function for transition
+
+* to (name,value)|(object) - compiles optimized tweening function.  Values can be functions and will still compile.
+
+* tween (function) - Uncompiled tweening function for transition.  
+
+* remove () - removes elements after transition is complete
+
+UNFINISHED / WIP:
+
+* on('end'|'start',function) - listen to on/end events
+
+* animate(transitionName) - transition chaining.
+
+#####c2.Layer2d - WIP - intended to be used for clumping complex renderables and only reprocessing changes
+######events
+
+* tick(function) - function called before context2d renders
+
+* tock(function) - function called after context2d renders
+
