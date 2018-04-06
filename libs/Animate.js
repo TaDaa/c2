@@ -1,4 +1,4 @@
-const d3 = require("d3");
+const d3 = global.d3 || require("d3");
 const Types = require('./Types'),
 float = Types.float,
 int = Types.int;

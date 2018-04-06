@@ -1,4 +1,3 @@
-
 window.addEventListener('load',function () {
     var content = document.querySelector('.content');
     content.innerHTML = ([ 

@@ -1,3 +1,4 @@
+const d3 = global.d3 || require("d3");
 const c2 = function c2 () {
 };
 c2.animate = require ('./Animate');
