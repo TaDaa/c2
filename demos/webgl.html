@@ -1,31 +1,22 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title></title>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
-    <script src="../dist/c2.min.js"></script>
+    <script type="application/javascript" src="https://d3js.org/d3.v5.min.js"></script>
+    <script type="application/javascript" src="https://rawgit.com/toji/gl-matrix/master/dist/gl-matrix-min.js"></script>
+    <script type="application/javascript" src="../dist/c2.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/highlight.min.js"></script>
-    <script src="bars.js"></script>
     <style>
-        html,body {
-            position:absolute;
-            top:0;
-            left:0;
-            right:0;
-            bottom:0;
+        html, body {
             overflow:hidden;
-            padding:0;
-            margin:0;
-            box-sizing:border-box;
-            display:inline;
-            max-height:100%;
-        }
-        canvas {
             position:absolute;
-            left:420px;
-            top:0px;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
         }
         .button-group {
             position:absolute;
@@ -58,6 +49,8 @@
         }
     </style>
 </head>
-<body class="content">
+<body>
+    <canvas></canvas>
 </body>
+    <script type="application/javascript" src="webgl.js"></script>
 </html>

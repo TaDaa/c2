@@ -1,11 +1,10 @@
-
-window.addEventListener('load',function () {
+window.addEventListener('DOMContentLoaded',function () {
     var content = document.querySelector('.content');
     content.innerHTML = ([ 
-        '<canvas ></canvas>',
+            '<canvas style="z-index:0;position:relative;background:white;transform:translateZ(0);backface-visibility:hidden;"></canvas>',
         '<div class="button-group">',
-            '<button style="width:100px" class="add">Double</button>',
-            '<button style="width:100px" class="remove">Half</button>',
+        '<button style="width:100px;z-index:1;position:relative;" class="add">Double</button>',
+        '<button style="width:100px;z-index:1" class="remove">Half</button>',
         '</div>',
         '<pre><code class="javascript"></code></pre>'
     ].join(''))

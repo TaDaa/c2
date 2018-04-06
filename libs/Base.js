@@ -1,193 +1,217 @@
-var invalidator = require('./Invalidate.js'),
-registry = require('./Registry.js');
+const invalidator = require('./Invalidate'),
+registry = require('./Registry'),
+animate = require('./Animate');
 
+class Base {
+    constructor () {
+        this.children = this.childNodes = [];
+        this._invalid_children_ = -1;
+        this._invalid_children = invalidator.children;
 
-
-
-function c2_Base () {
-    this._events = {};
-}
-
-c2_Base.prototype._not_invalid_ = 1;
-c2_Base.prototype._invalid_cleanup = invalidator.cleanup;
-c2_Base.prototype._invalid_parents = invalidator.parents;
-c2_Base.prototype._invalid_children_ = -1;
-c2_Base.prototype._invalid_children = invalidator.children;
-c2_Base.prototype.registry = registry;
-c2_Base.prototype.invalidator = invalidator;
-c2_Base.prototype.appendChild = c2_appendChild;
-c2_Base.prototype.insertBefore = c2_insertBefore;
-c2_Base.prototype.removeChild = c2_removeChild;
-c2_Base.prototype.querySelector = c2_querySelector;
-c2_Base.prototype.querySelectorAll = c2_querySelectorAll;
-c2_Base.prototype.addEventListener = c2_addEventListener;
-c2_Base.prototype.removeEventListener = c2_removeEventListener;
-c2_Base.prototype.setAttribute = c2_setAttribute;
-c2_Base.prototype.getAttribute = c2_getAttribute;
-c2_Base.prototype.removeAttribute = c2_removeAttribute;
-c2_Base.prototype.render = c2_Base.prototype.oninvalid =c2_Base.prototype.ontock = c2_Base.prototype.ontick = undefined;
-c2_Base.prototype.invalidate = c2_invalidate;
-c2_Base.prototype._invalidate = c2_pre_checked_invalidate;
-c2_Base.prototype._events = undefined;
-
-
-
-function c2_appendChild (drawable) {
-    drawable.parentNode && drawable.parentNode.removeChild(drawable);
-    var children=this.children;
-    if (!children) {
-        children = this.children = [];
+        this._not_invalid_ = 1;
+        this._invalid_cleanup = invalidator.cleanup;
+        this._invalid_parents = invalidator.parents;
+        this.registry = registry;
+        this.invalidator = invalidator;
     }
 
-    drawable.parentIndex=children.push(drawable)-1;
-    drawable.parentNode = this;
+    appendChild (element) {
+        var children;
 
-    if (this._not_invalid_) {
-        this._invalidate();
-    }
-    return drawable;
-}
+        if (element.parentNode) {
+            element.parentNode.removeChild(element);
+        }
 
+        children = this.children;
 
-function c2_insertBefore (drawable,referenceNode) {
-    if (drawable.parentNode) {
-        drawable.parentNode.removeChild(drawable);
-    }
+        element.parentIndex=children.push(element)-1;
+        element.parentNode = this;
 
-    var 
-    children = this.children,
-    index = -1;
-
-    if (!children) {
-        children = this.children = [];
+        if (this._not_invalid_) {
+            this.invalidate();
+        }
+        return element;
     }
 
-    if (referenceNode && referenceNode.parentNode === this) {
-        index = children.indexOf(referenceNode);
-    }
-    if (index !== -1) {
-        drawable.parentIndex = index;
-        children.splice(index,0,drawable);
-    } else {
-        drawable.parentIndex = children.push(drawable) - 1;
-    }
-    drawable.parentNode=this;
+    insertBefore (element,referenceNode) {
+        var children,
+        index;
 
-    if (this._not_invalid_) {
-        this._invalidate();
-    }
-    return drawable;
-}
+        if (element.parentNode) {
+            element.parentNode.removeChild(element);
+        }
 
+        children = this.children;
+        index = -1;
 
-function c2_removeChild (drawable) {
-    if (drawable.parentNode !== this) {
-        return;
-    } 
+        if (referenceNode && referenceNode.parentNode === this) {
+            index = children.indexOf(referenceNode);
+        }
+        if (index !== -1) {
+            element.parentIndex = index;
+            children.splice(index,0,element);
+        } else {
+            element.parentIndex = children.push(element) - 1;
+        }
+        element.parentNode=this;
 
-    if (this._invalid_children_ === -1) {
-        this._invalid_children_ = drawable.parentIndex|0;
-        this._invalid_children[this._invalid_children.index++]=this;
-    }
-    if (this._invalid_children_ > drawable.parentIndex) {
-        this._invalid_children_ = drawable.parentIndex;
+        if (this._not_invalid_) {
+            this.invalidate();
+        }
+        return element;
     }
 
-    this.children[drawable.parentIndex] = undefined;
-    drawable.parentIndex = -1;
-    drawable.parentNode = undefined;
+    removeChild (element) {
+        if (element._c2_transition) {
+            animate.remove(element);
+        }
 
-    if (this._not_invalid_) {
-        this._invalidate();
+        if (element.parentNode !== this) {
+            return undefined;
+        } 
+
+
+        if (this._invalid_children_ === -1) {
+            this._invalid_children_ = element.parentIndex|0;
+            this._invalid_children[this._invalid_children.index++]=this;
+        }
+        if (this._invalid_children_ > element.parentIndex) {
+            this._invalid_children_ = element.parentIndex;
+        }
+
+        if (this.children) {
+            this.children[element.parentIndex] = undefined;
+            element.parentIndex = -1;
+            element.parentNode = undefined;
+        }
+
+        if (this._not_invalid_) {
+            this.invalidate();
+        }
+        return element;
     }
-    return drawable;
-}
 
-
-function c2_querySelector (selector) {
-    var children = this.children,
-    child,
-    result;
-    if (children) {
-        for (var i=0,ln=children.length;i<ln;i++) {
-            if (child = children[i]) {
-                if (child._c2_proto === selector) {
-                    return child;
-                } else if (child.children && child.children.length) {
-                    result = c2_querySelector.call(child,selector);
-                    if (result) {
-                        return result;
+    // TODO support better queries
+    querySelector (selector) {
+        var children = this.children,
+        child,
+        result;
+        if (children) {
+            for (var i=0,ln=children.length;i<ln;i++) {
+                if (child = children[i]) {
+                    if (child.constructor === selector) {
+                        return child;
+                    } else if (child.children && child.children.length) {
+                        result = child.querySelector(selector);
+                        if (result) {
+                            return result;
+                        }
                     }
                 }
             }
         }
+        return null;
     }
-    return null;
-}
 
+    querySelectorAll (selector,passThrough) {
+        var children = this.children,
+        child,
+        result = passThrough || [];
+        if (children) {
+            for (var i=0,ln=children.length;i<ln;i++) {
+                if (child = children[i]) {
+                    child.constructor === selector && result.push(child);
+                    (child.children && child.children.length) && child.querySelectorAll(selector,result);
+                }
+            }
+        }
+        return result;
+    }
 
-function c2_querySelectorAll (selector,passThrough) {
-    var children = this.children,
-    child,
-    result = passThrough || [];
-    if (children) {
-        for (var i=0,ln=children.length;i<ln;i++) {
-            if (child = children[i]) {
-                child._c2_proto === selector && result.push(child);
-                (child.children && child.children.length) && c2_querySelectorAll.call(child,selector,result);
+    addEventListener (name,listener) {
+        var events = this._events;
+        !events && (events = this._events = {});
+        events[name] && events[name].push(listener) || (events[name] = [listener]);
+        return true;
+    }
+
+    removeEventListener (name,listener) {
+        var events = this._events[name],
+        index = events ? events.indexOf(listener) : -1;
+        return index !== -1 && (events.splice(index,1),true);
+    }
+    setAttribute (name,value) {
+        if (this[name] !== value) {
+            this[name] = value;
+
+            if (this._not_invalid_) {
+                this.invalidate();
+            }
+        }
+        //this[name] !== value && (this[name] = value,(this.children && this._not_invalid_) && (this.parentNode && this.parentNode._not_invalid_) && (this.invalidate()));
+    }
+    getAttribute (name) {
+        return this[name];
+    }
+    removeAttribute (name) {
+        if (this[name] !== undefined) {
+            this[name] = undefined;
+
+            if (this._not_invalid_) {
+                this.invalidate();
+            }
+        }
+        //this[name] !== undefined && (this[name] = undefined,(this.children && this._not_invalid_) && (this.parentNode && this.parentNode._not_invalid_) && (this.invalidate()));
+    }
+    render () {
+    }
+
+    invalidate () {
+        if (this.parentNode) { 
+            if (this._not_invalid_) {
+                this._invalid_cleanup[this._invalid_cleanup.index++]=this;
+                this._not_invalid_ = 0;
+                if (this.parentNode._not_invalid_) {
+                    this.parentNode.invalidate();
+                }
+            }
+        } else if (this._not_invalid_) {
+            this._not_invalid_ = 0;
+            this._invalid_cleanup[this._invalid_cleanup.index++]=this;
+            this._invalid_parents[this._invalid_parents.index++]=this;
+            if (!this.invalidator.scheduled_next) {
+                this.invalidator();
             }
         }
     }
-    return result;
+    /*
+     *_invalidate () {
+     *    if (this.parentNode) { 
+     *        this._not_invalid_ && (
+     *            this._invalid_cleanup[this._invalid_cleanup.index++]=this,
+     *            this._not_invalid_ = 0,
+     *            this.parentNode._not_invalid_ && this.parentNode._invalidate()
+     *        )
+     *    } else if (this._not_invalid_) {
+     *        this._not_invalid_ = 0,
+     *        this._invalid_cleanup[this._invalid_cleanup.index++]=this;
+     *        this._invalid_parents[this._invalid_parents.index++]=this;
+     *        !this.invalidator.scheduled_next && this.invalidator();
+     *    }
+     *}
+     */
 }
 
 
-function c2_addEventListener (name,listener) {
-    var events = this._events;
+Base.prototype.invalidate.compiled =  Base.prototype.invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
+//Base.prototype._invalidate.compiled =  Base.prototype._invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
+//Base.prototype._not_invalid_ = 1;
+//Base.prototype._invalid_cleanup = invalidator.cleanup;
+//Base.prototype._invalid_parents = invalidator.parents;
+//Base.prototype._invalid_children_ = -1;
+//Base.prototype._invalid_children = invalidator.children;
+//Base.prototype.registry = registry;
+//Base.prototype.invalidator = invalidator;
+//Base.prototype._events = undefined;
 
-    events[name] && events[name].push(listener) || (events[name] = [listener]);
-    return true;
-}
-
-
-function c2_removeEventListener (name,listener) {
-    var events = this._events[name],
-    index = events ? events.indexOf(listener) : -1;
-    return index !== -1 && (events.splice(index,1),true);
-}
-
-function c2_setAttribute (name,value) {
-    var k = name,v=value;
-    this[k] = v;
-    this._not_invalid_ && (this._invalidate());
-}
-function c2_getAttribute (name) {
-    return this[name];
-}
-function c2_removeAttribute (name) {
-    this[name] = undefined;
-    this._not_invalid_ && (this._invalidate());
-}
-
-//TODO invalidate event
-function c2_pre_checked_invalidate () {
-    this._invalid_cleanup[this._invalid_cleanup.index++]=this;
-    this._not_invalid_ = 0;
-
-    this.parentNode._not_invalid_ && this.parentNode.invalidate();
-}
-c2_pre_checked_invalidate.compiled = c2_pre_checked_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
-function c2_invalidate () {
-    if (this._not_invalid_) {
-        this._invalid_cleanup[this._invalid_cleanup.index++]=this;
-        this._not_invalid_ = 0;
-        this.willInvalidate && this.willInvalidate();
-
-        this.parentNode._not_invalid_ && this.parentNode.invalidate();
-    }
-}
-
-c2_invalidate.compiled = c2_invalidate.toString().replace(/\n|\t|[\s]{2,}/g,'').match(/([^\{]*)(.*)/)[2].slice(1,-1);
-
-
-module.exports = c2_Base;
+module.exports = Base;

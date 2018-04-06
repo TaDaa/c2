@@ -53,9 +53,9 @@ module.exports =  new Drawable(function (parentContext,d,ix,changed) {
         'height' : types.int
 })
 .proto({
-        'forceUpdate' : function () {
-            this._forced = true;
-        }
+    'forceUpdate' : function () {
+        this._forced = true;
+    }
 });
 
 

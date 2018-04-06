@@ -1,15 +1,45 @@
+const d3 = require("d3");
+const Types = require('./Types'),
+float = Types.float,
+int = Types.int;
 
 module.exports = function (selection) {
     return new c2_Animate(selection);
 };
+module.exports.remove = function (item) {
+    const transition = item._c2_transition;
+    var p,tweens,tween_group,i,ln;
+
+    for (p in transition) {
+        tweens = transition[p];
+        tween_group = tweens.tween_group;
+        
+        //TODO if tweens onEnd/remove - remove tweens from eventGroup
+        if (tweens.end_index !== -1) {
+            tweens.end_group[tweens.end_index] =0;
+        }
+        for (i=0,ln=tweens.length;i<ln;i++) {
+            tween_group[tweens[i]] = 0;
+        }
+
+        if (tween_group.cnt !== 0 && (tween_group.cnt -= ln) <= 0 ) {
+            tween_group.cnt=tween_group.length=0;
+        }
+    }
+    item._c2_transition = false;
+    return module.exports;
+}
 
 //default d3 ease,delay,duration function
-var DEFAULT_EASE = function easeCubicInOut(t) {
+const 
+invalidate = require('./Invalidate'),
+DEFAULT_EASE = function easeCubicInOut(t) {
     return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
 },
-invalidate = require('./Invalidate'),
 DEFAULT_DELAY = 0,
-DEFAULT_DURATION = 250;
+DEFAULT_DURATION = 250,
+isChrome =  typeof navigator !== 'undefined' && /Chrome/.test(navigator.userAgent);
+
 
 
 //var animateIds=1;
@@ -17,9 +47,13 @@ function c2_Animate (name) {
 
     function animation (selection) {
         var compiled;
-        if (compiled = animation._compile()) {
+        if (animation._to && (compiled = animation._compile(selection))) {
+            //animation._id = Object.keys(animation._to).map()
             animation.tween('',compiled);
         }
+        //if (animation._to && (compiled = animation._compile(selection))) {
+            //animation.tween('',compiled);
+        //}
         pending[pending_cnt++] = {
             'selection' : selection,
             'animation' : animation
@@ -34,7 +68,7 @@ function c2_Animate (name) {
     animation._delay = DEFAULT_DELAY;
     animation._duration = DEFAULT_DURATION;
     animation._tween_map={};
-    animation._to = {};
+    //animation._to = {};
     animation._compiled = {};
     animation._compiled_fn = undefined;
     //TODO do we need from?
@@ -52,7 +86,7 @@ function c2_Animate (name) {
     animation.to = c2_to;
     animation.on = c2_on;
 
-    animation.remove = c2_remove
+    animation.remove = c2_remove;
 
     //TODO for chaining
     //animation.animate;
@@ -105,11 +139,99 @@ function c2_on (name,fn) {
     return this;
 }
 
+//further optimize by compiling animations per prototype
+function c2_compile_proto (item,id,keys,values) {
+    if (item.constructor._compiled && item.constructor._compiled[id]) {
+        return this._compiled[id];
+    }
+
+    var vars=['var me=this'],vars2=[],interpolators=[],tween=[],compiled,key,value,attr,is_num,s,result,
+    s_inner;
+
+    if (!(compiled=item.constructor._compiled)) {
+        compiled = item.constructor._compiled = {};
+    }
+
+    for (var i=0,ln=keys.length;i<ln;i++) {
+        key = keys[i];
+        value = values[i];
+        attr = item.constructor._attributes[key];
+        is_num = attr === Types.float || attr === Types.int;
+        vars.push(
+            `v${i}=${typeof value === 'function' ? attr.animateValue`to["${key}"].call(this,d,i)` : attr.animateValue`${value}`}`,
+            //`v${cnt}=typeof to["${key}"] === function ? ${attr.animateValue`to["${key}"].call(this,d,i)`} : ${attr.animateValue`to["${key}"]`}`,
+            `s${i}=${attr.animateValue`this["${key}"]`}`
+        );
+        vars2.push(`v${i}`,`s${i}`);
+
+        interpolators.push(
+            is_num ? `s${i}=s${i}||0;v${i}-=s${i};` : `v${i}=${attr.animateValue`d3.interpolate(s${i},v${i});`}`
+        );
+        tween.push(
+            is_num ? `n=(s${i}+v${i}*t);` : `n=v${i}(t);`,
+            //is_num ? `me["${key}"]=s${i}+v${i}*t;` : `me["${key}"]=${attr.animateValue`v${i}(t)`}`
+            `n!==me["${key}"] && (me["${key}"]=${attr.animateValue`n`},!c && (c=true));`
+        );
+    }
+    s_inner = `var n,c=false;
+            ${tween.join('')};
+            c && ((me.children && me._not_invalid_) || (me.parentNode && me.parentNode._not_invalid_)) && me.invalidate();`;
+    if (isChrome) {
+        //s = new Function('t','me',...vars2,s_inner);
+        s = (0,eval)(`(function () {
+            return function (t,me,${vars2.join(',')}) {
+                ${s_inner};
+            }
+        })`)();
+    }
+    //problem we are seeing is the amount of garbage accrued in high volume due to scoped functions
+    //result = (0,eval)(`(function (${isChrome && 's,' || '' }d3) {
+    //result = (eval)(`(function (s) {
+    //result = new Function('s',`
+    result = (0,eval)(`(function (s) {
+        return function (to,d,i) {
+            ${vars.join(',')};
+            ${interpolators.join('')}
+            return function (t) {
+                ${isChrome && `s(t,me,${vars2.join(',')})` || s_inner};
+            };
+        }
+    })`)(s)
+
+    //result.s = s;
+    //window.values = values;
+    //window.s = s;
+    //compiled[id] = result;
+    //result = isChrome && result(s,d3) || result(d3);
+    //result.values = values;
+    //console.error(result);
+
+    return (compiled[id] = result);
+
+}
+function c2_compile () {
+    const to = this._to,keys = Object.keys(to), values = Object.values(to);
+    var id = keys.length ? `${keys[0]}=${typeof values[0] === 'function' && '@' || values[0]}` : '';
+    for (var i=1,ln=keys.length;i<ln;i++) {
+        id += `&${keys[i]}=${typeof values[i] === 'function' && '@' || values[i]}`
+    }
+    return function (d,i) {
+        var fn;
+        if (this.constructor._compiled && this.constructor._compiled[id]) {
+            fn = this.constructor._compiled[id];
+            return this.constructor._compiled[id].call(this,to,d,i);
+        } else {
+            return c2_compile_proto(this,id,keys,values).call(this,to,d,i);
+        }
+        return fn.call(this,to,d,i);
+    };
+}
 //TODO we need to separate the on_end and remove logic from compile and either put it into tween or hook it directly into 
 //the scheduler
-function c2_compile () {
-    var p,to=this._to,result='(function (to) {return function (d,i) {',
+function c2_compile3 () {
+    var p,to=this._to,result='(function (to,s,d3) {return function (d,i) {',
     vars = ['var me=this'],
+    vars2 = [],
     interpolators = [],
     tween = [],
     compiled = this._compiled,
@@ -130,33 +252,84 @@ function c2_compile () {
 
 
     compiled = this._compiled =  {};
+    //right now tween is a function -- we want to try the following
+    //[ln,property,v,t,s,instance,] //instance comes from parent -- shoudl be uneeded
+
 
     for (p in to) {
         compiled[p] = to[p];
-        vars.push('s'+cnt+'=this["'+p+'"]',
+        vars.push(
             'v'+(cnt)+'='+ (typeof to[p] === 'function' && 'to["'+p+'"].call(this,d,i)'||'to["'+p+'"]'),
-            't'+(cnt)+'=typeof v'+cnt+' === "number"'
+            't'+(cnt)+'=typeof v'+cnt+' === "number"',
+            's'+cnt+'=this["'+p+'"]'
         );
+        vars2.push('v'+cnt,'t'+cnt,'s'+cnt);
         interpolators.push(
             'if (t'+cnt+') {s'+cnt+'=s'+cnt+'||0;v'+cnt+'-=s'+cnt+';} else {v'+cnt+'=d3.interpolate(s'+cnt+',v'+cnt+');}'
-        )
-        tween.push ('if (t'+cnt+') m["'+p+'"]=s'+cnt+'+v'+cnt+'*t; else m["'+p+'"]=v'+cnt+'(t);')
+        );
+        //tween.push ('if (t'+cnt+') me["'+p+'"]=s'+cnt+'+v'+cnt+'*t; else me["'+p+'"]=v'+cnt+'(t);');
+        tween.push ('if (t'+cnt+') n=s'+cnt+'+v'+cnt+'*t; else n=v'+cnt+'(t); n!==me["'+p+'"] && (me["'+p+'"]=n,!c && (c=true));');
         cnt++;
     }
+    var s = (0,eval)(`
+        (function (t,me,d3,${vars2.join(',')}) {var n,c=false;
+                ${tween.join('')};
+            c && ((me.children && me._not_invalid_) || (me.parentNode && me.parentNode._not_invalid_)) && me.invalidate();
+        })
+    `);
+    /*
+     *s2 = (0,eval)(`(function (t) {
+     *    s(t,this,${vars2.join(',')});
+     *})`)
+     */
+//shared2 = function (t,);
     result += vars.join(',') + ';';
     result += interpolators.join('');
-    result += 'return function (t) {'+
-        'var m = me;';
+    result += isChrome ? `return function (t) {s(t,me,d3,${vars2.join(',')})};` : 
+     `return function (t) {var n,c=false;
+        ${tween.join('')};
+        c && ((me.children && me._not_invalid_) || (me.parentNode && me.parentNode._not_invalid_)) && me.invalidate();
+    }`
+    //result += 'return function (t) {';
+        //vars2.join(',') + ';';
 
-    result += tween.join('');
-    result += 'm._not_invalid_&&m.parentNode&&m._invalidate();';
-    result += '}';
+    //result += tween.join('');
+    //result += '(me.children && me._not_invalid_) || (me.parentNode && me.parentNode._not_invalid_) && me._invalidate();'
+    //result += 'm._not_invalid_&&m.parentNode &&m._invalidate();';
+    //result += 'm._invalidate();';
+    //result += '}';
+    //result += `return shared.bind(me,t,me,${vars2.join(',')})`
+    //result += 'return function () {}'
 
     result += '}})';
-    return this._compiled_fn = (0,eval)(result)(to);
+    return this._compiled_fn = (0,eval)(result)(to,s,c2.d3);
+}
+
+function c2_compile2 () {
+    var p,v, to = this._to,tod=[Object.keys(to).length*4,'this'];
+    for (p in to) {
+        v = to[p];
+        tod.push(
+            //t
+            '(v=' + (typeof v === 'function' && `to["${p}"].call(this,d,i)` || `to["${p}"]`) + `,t=(typeof v === 'number'))`,
+            //s
+            `s = this["${p}"]`,
+            //v
+            `t?(v-=s):d3.interpolate(s,v)`,
+            //t
+            `"${p}"`
+        );
+    }
+    return this._compiled_fn = eval(`(function (d,i) {
+        var s,v,t;
+        return [${tod.join(',\n')}];
+    })`)
 }
 
 function c2_to (name,value) {
+    if (!this._to) {
+        this._to = {};
+    }
     if (arguments.length > 1) { 
         this._to[name]=value;
     } else if (typeof name === 'object') {
@@ -234,6 +407,7 @@ function c2_to2 (name,value) {
     }
 }
 function c2_tween (name,tween) {  
+    var index;
     if (arguments.length > 1) {
         if (index = this._tween_map[name]) {
             this._tweens[index] = tween;
@@ -254,6 +428,7 @@ ordered_available = [],
 ordered_available_cnt=0,
 ordered_available_start=0,
 start_duration_end_index=-1,
+start_duration_start_index=0,
 ease_groups = [],
 pending=[],
 pending_cnt = 0,
@@ -290,21 +465,16 @@ function add_pending (date) {
             ordered_available_start=ordered_available_cnt=0;
         } else {
             ordered_available_start=ordered_available_cnt=0;
-            for (i=0,ln=available_start_indices.length;i<ln;i++) {
+            for (i=start_duration_start_index/2,ln=(start_duration_end_index+1)/2;i<ln;i++) {
                 if (available_start_indices[i]) {
-                    j = i*2;
-                    if (j >= start_duration_end_index) {
-                        break;
-                    } else {
-                        ordered_available[ordered_available_cnt++]=j;
-                    }
+                    ordered_available[ordered_available_cnt++]=i*2;
                 }
             }
         }
     }
     for (i=0,ln=pending_cnt;i<ln;i++) {
         bundle = _pending[i];
-        animation = bundle.animation
+        animation = bundle.animation;
         selection = bundle.selection;
         selection._started = true;
         groups = selection._groups;
@@ -358,9 +528,13 @@ function add_pending (date) {
                             index = ordered_available[ordered_available_start++];
                             ordered_available_cnt--;
                             available_start_indices[index/2]=0;
+                        } else if (start_duration_start_index > 0) {
+                            index = start_duration_start_index-=2;
+                            available_start_indices[index/2]=0;
                         } else {
-                            index = start_duration_end_index + 1;
-                        } 
+                            index = (start_duration_end_index+=2)-1;
+                            available_start_indices[index/2]=0;
+                        }
 
                         //undefined is for the event group, which may or may not exist
                         ease_group = _ease_groups[index/2] = start_duration_map[start_duration_key] = [undefined,ease,tween_group=[]]; 
@@ -368,9 +542,9 @@ function add_pending (date) {
 
                         start_durations[index] =  delay;
                         start_durations[++index] = duration;
-                        if (index > start_duration_end_index) {
-                            start_duration_end_index = index;
-                        }
+                        //if (index > start_duration_end_index) {
+                            //start_duration_end_index = index;
+                        //}
 
                     } else {
                         index = ease_group.indexOf(ease);
@@ -385,7 +559,7 @@ function add_pending (date) {
                     if (!names) {
                         names = item._c2_transition = {};
                     }
-                    tweens = names[_name] = [];
+                    tweens = names[_name] = new Array(_tweens.length);
                     tweens.tween_group = tween_group;
                     tweens.node = item;
                     if (_remove || _end) {
@@ -432,29 +606,39 @@ function start_c2_timer () {
     ease_value,
     duration,tween,
     tweens,
-    cleanup = 0;
+    cleanup = 0,
+    cleanup_start,cleanup_end,
+    n=0;
+    //sd=Date.now()
 
     //first check pending
     if ( pending_cnt) {
+        //console.error('add');
         add_pending(date);
     }
 
+    //console.error(start_duration_start_index,start_duration_end_index);
     if (start_duration_end_index > 0) {
-        for (i=0,j=0,g=0,ln=start_duration_end_index;i<ln;i++,g++) {
-            start = start_durations[i++];
+        for (i=start_duration_start_index,j=0,g=i/2,ln=start_duration_end_index;i<ln;g++,i=g<<1) {
+            n=i+1;
+            //,n=i+1
+            start = start_durations[i];
             if (start !== -1 && date > start) {
-                duration = start_durations[i];
+                duration = start_durations[n];
                 if (duration > 0) {
                     t = (date-start) / duration; 
                     (t >= 1) && (e = t = 1);
                     if (group = ease_groups[g]) {
                         for (j=1,jln=group.length;j<jln;j+=2) {
-                            tweens = group[j+1];
-                            if ( kln=tweens.length) {
-                                ease_value = group[j](t);
-                                for (k=0;k<kln;k++) {
-                                    (tween = tweens[k]) && tween(ease_value);
-                                }
+                            tweens = group[j+1]
+                            if (kln=tweens.length) {
+                               ease_value = group[j](t);
+                               for (k=0,kln=tweens.length;k<kln;k++) {
+                                   if (tween = tweens[k]) {
+                                       tween(ease_value)
+                                   }
+                                   //(tween = tweens[k]) && tween(ease_value);
+                               }
                             }
                         }
                     }
@@ -464,11 +648,12 @@ function start_c2_timer () {
                 if (e) {
                     e=0;
                     !available_invalid && (available_invalid = true);
-                    available_start_indices[(i-1)/2]=1;
+                    available_start_indices[g]=1;
                     if (group=group[0]) {
                         for (j=0,jln=group.length;j<jln;j++) {
                             if (tweens=group[j]) {
                                 item = tweens.node;
+                                item._c2_transition = null;
                                 if (end=tweens.end) {
                                     for (k=0,kln=end.length;k<kln;k++) {
                                         end[k].call(item,item.__data__,tweens.index);
@@ -480,26 +665,45 @@ function start_c2_timer () {
                             }
                         }
                     }
-                    delete start_duration_map[start_durations[i-1]+'-'+start_durations[i]];
-                    start_durations[i-1] =  start_durations[i] = -1;
-                    ease_groups[g] = false;
-                    i === start_duration_end_index && (cleanup = 1);
+                    delete start_duration_map[start_durations[i]+'-'+start_durations[n]];
+                    start_durations[i] =  start_durations[n] = -1;
+                    ease_groups[g] = null;
+                    if (n === start_duration_end_index) {
+                        cleanup = cleanup_end = true;
+                    } 
+                    if (i === start_duration_start_index) {
+                        cleanup = cleanup_start = true;
+                    }
                 }
             }
         }
         if (cleanup) {
-            //update end_index
-            for (i=start_duration_end_index-1;i>=-1;i-=2) {
-                if (start_durations[i] !== -1) {
-                    start_duration_end_index = i+1;
-                    break;
+            if (cleanup_end) {
+                for (i=start_duration_end_index-1;i>=start_duration_start_index;i-=2) {
+                    if (start_durations[i] !== -1) {
+                        start_duration_end_index = i+1;
+                        break;
+                    }
                 }
+                if (i<start_duration_start_index) { start_duration_end_index=-1;console.error('done')};
             }
-            if (i<=-1) start_duration_end_index=-1;
+            //update start index
+            if (cleanup_start) {
+                for (i=start_duration_start_index;i<=start_duration_end_index;i+=2) {
+                    if (start_durations[i] !== -1) {
+                        //console.error('updated?',i);
+                        start_duration_start_index = i;
+                        break;
+                    }
+                }
+                if (i>start_duration_end_index || start_duration_start_index < 0) start_duration_start_index =0;
+            } 
         }
     }
+    //console.error(new Date() - date);
 
     if (pending_cnt > 0 || start_duration_end_index > 0) {
+        //requestAnimationFrame(start_c2_timer);
         invalidate.nextCalculate(start_c2_timer);
     } else {
         c2_timer_running = false;

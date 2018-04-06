@@ -2,7 +2,7 @@
 window.addEventListener('load',function () {
     var content = document.querySelector('.content');
     content.innerHTML = ([ 
-        '<canvas ></canvas>',
+        '<canvas style="background:white"></canvas>',
         '<div class="button-group">',
             '<button style="width:100px" class="add">Double</button>',
             '<button style="width:100px" class="remove">Half</button>',
@@ -85,7 +85,6 @@ function load () {
     function render () {
         //log amount of data being rendered
         console.error(data.length);
-
         var lastSize = last_size,
         arc = d3.arc()
             .innerRadius(height/8)
@@ -101,7 +100,7 @@ function load () {
         //webgl may be supported later
         context = canvas.select(c2.Context2d)
             //tick is a custom event that is fired before the context is rendered
-            .on('tick',function () {
+           .on('tick',function () {
                 this.context.clearRect(
                     0,
                     0,
@@ -208,7 +207,6 @@ function load () {
         );
 
 
-
         //nothing new here!
         //we animate removed data items 
         //and remove associated elements
@@ -219,7 +217,7 @@ function load () {
                 .delay(function (d,i) {
                     return Math.max(
                         (last_size-1)/50,1
-                    )
+                    );
                 })
                 .ease(d3.easeElastic)
                 .tween(
@@ -247,7 +245,7 @@ function load () {
                     }
                 )
                 .remove()
-            )
+            );
 
         last_size = data.length;
     }
