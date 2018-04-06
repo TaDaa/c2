@@ -1,6 +1,6 @@
 # C2
 
-C2 is a helper library for creating custom components that render to canvas.  Currently C2 is only compatible with D3 v4.  
+C2 is a helper library for creating custom components that render to canvas.  Currently C2 is only compatible with D3 v3, v4, and v5.  
 
 C2 works by allowing you to define custom element tags that are intended to render to canvas.
 
