@@ -69,7 +69,7 @@ api/docs
 
 2) <a href="https://tadaa.github.io/c2/demos/donut.html" target="_blank">Donut (uses Path2D for canvas with d3.arc)</a>
 
-
+3) <a href="https://tadaa.github.io/c2/demos/webgl.html" target="_blank">WebGL</a>
 
 ### Quickstart
 1) Download script through npm or download/include the appropriate script.  Pre-minified scripts are available.
