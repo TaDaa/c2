@@ -1,6 +1,6 @@
 {
   "name": "c2",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "d3 component canvas",
   "main": "dist/c2.node.js",
   "author": {
