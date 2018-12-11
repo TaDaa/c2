@@ -1,4 +1,5 @@
 window.addEventListener('DOMContentLoaded', function () {
+    const mat4 = glMatrix.mat4;
     var content = document.querySelector('body');
     content.innerHTML = ([ 
         '<canvas style="z-index:0;left:420px;position:relative;background:white;transform:translateZ(0);backface-visibility:hidden;"></canvas>',
